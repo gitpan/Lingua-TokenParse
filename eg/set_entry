@@ -1,0 +1,80 @@
+#!/usr/bin/perl -w
+use strict;
+use DB_File;
+use CGI ':standard';
+use CGI::Carp 'fatalsToBrowser';
+use Net::Dict;
+
+my ($word_max, $defn_max) = (10, 200);
+my ($word, $defn, $remove) = (
+    param ('word'),
+    param ('definition'),
+    param ('remove')
+);
+
+my $lexicon = '/usr/local/www/htdocs/dev/lex/lexicon';  # gdog
+my %lexicon; tie %lexicon, 'DB_File', $lexicon
+    or die "Can't tie to $lexicon - $!\n";
+
+if ($remove) {
+    delete $lexicon{$word};
+    $word = undef;
+}
+elsif ($word && $defn) {
+    die 'Error: Entry too long.'
+        if length ($word) > $word_max || length ($defn) > $defn_max;
+    $lexicon{$word} = $defn;
+    $word = undef;
+    $defn = undef;
+}
+
+print header, start_html('Set Lexicon Entry'), start_form,
+    'Word: ',
+    ($word ? b($word) :
+        textfield(
+            -name => 'word', -value => $word,
+            -size => 15, -maxlength => 15,
+            -override => 1,
+        )
+    ), ' ',
+    ($word ? checkbox(
+        -name  => 'remove',
+        -value => 1,
+        -override => 1,
+    ) : ''),
+    br,
+    'Definition:',
+    br,
+    textarea(
+        -name => 'definition', -value => $lexicon{$word},
+        -rows => 3, -cols => 40,
+        -override => 1,
+    ),
+    br,
+    submit('submit', 'submit'),
+    br;
+
+if ($word && !$defn) {
+    my ($server, $database) = ('dict1.us.dict.org', 'web1913');
+    my $dict = Net::Dict->new($server, Debug => 0) or
+        die "Can't reach $server to fetch dictionary entries.\n";
+    $dict->setDicts($database);
+    print $dict->dbTitle($database), " says that $word means:",
+        p, 
+        join (p, map { $_->[1] } @{ $dict->define($word) }),
+        p,
+        hidden('word', $word);
+}
+
+#if (!$word || ($word && !$defn)) {
+    print b('The lexicon:'), br;
+    my $i = 0;
+    for (sort keys %lexicon) {
+        print ++$i, ') ',
+            a({ -href => url() . "?word=$_" }, $_), ": $lexicon{$_}",
+            br, "\n";
+    }
+#}
+
+untie %lexicon if -e $lexicon;
+print end_form, end_html;

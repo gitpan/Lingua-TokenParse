@@ -83,5 +83,11 @@ Revision history for Perl extension Lingua::TokenParse.
     - Updated eg/sample0 and the test script, appropriately.
     - Fixed and enhanced documentation.
 
-0.10.1
+0.10.1  Mon Apr 30
     - Fixed and enhanced documentation.
+
+0.10.2  Mon Apr 30
+    - Made the constructor accept a separator argument.
+    - Updated the eg/sample0 program.
+    - Whoops.  Added the forgotten eg/set_entry to the MANIFEST.
+    - Fixed documentation as usual...

@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.10.1';
+$VERSION = '0.10.2';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -29,7 +29,7 @@ sub new {  # {{{
         # Definitions of the known and unknown fragments in knowns.
         definitions  => {},
         # Fragment definition separator.
-        separator    => ' + ',
+        separator    => $args{separator} || ' + ',
         # Known trimming regexp rules.
         rules        => [],
         # Globals used by the build_combinations method (and
@@ -287,7 +287,7 @@ sub trim_knowns {  # {{{
             }
         }
 
-        # Remove combinations that were flagged as being bogus.
+        # Remove this combination if it was flagged as being bogus.
         delete $trimmed{$combo} if $flag;
     }
 
@@ -362,8 +362,9 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
   my %lexicon;
   @lexicon{qw(art ion ti)} = qw(foo bar baz);
   my $obj = Lingua::TokenParse->new(
-      word    => $word,
-      lexicon => \%lexicon,
+      word      => $word,
+      lexicon   => \%lexicon,
+      separator => ' ~ ',
   );
   print scalar $obj->output_knowns;
 
