@@ -4,16 +4,16 @@ Revision history for Perl extension Lingua::TokenParse.
 	- original version; created by h2xs 1.22 with options
 		-X -n Lingua::TokenParse
 
-0.02  Fri Apr  4
+0.02  Fri Apr 4 2003
     - Fixed an undefined value used in the successor method.
     - Enhanced and fixed documentation.
 
-0.03  Sat Apr 5
+0.03  Sat Apr 5 2003
     - Handled prefix and suffix hyphens.
     - Enhanced documentation.
     - Made a handy eg/sample script that uses a dict server.
 
-0.04  Tue Apr 8
+0.04  Tue Apr 8 2003
     - Removed the misleading ..okay broken code to concatinate
       unknown fragments in the build_knowns() method.
     - Added the entirely crucial, and sorely lacking, reset_parse()
@@ -24,7 +24,7 @@ Revision history for Perl extension Lingua::TokenParse.
     - Updated the documentation.
     - Updated the test suite.
 
-0.05  Wed Apr 9
+0.05  Wed Apr 9 2003
     - Added a trim_knowns() method to concatinate unknowns and remove
       "already seen" combinations.
     - Added a parse() method to call the individual parsing methods.
@@ -32,18 +32,18 @@ Revision history for Perl extension Lingua::TokenParse.
     - Updated eg/ samples.
     - Repaired the broken test suite.
 
-0.06  Thu Apr 10
+0.06  Thu Apr 10 2003
     - Made the output_knowns() method show the fragment definitions.
     - Added the token_parse CGI to the eg/ directory.
 
-0.07  Thu Apr 10
+0.07  Thu Apr 10 2003
     - Moved the publically unnecessary reset_parse() method to parse().
     - Updated the documentation and eg/sample0, accordingly.
 
-0.07.1  Thu Apr 10
+0.07.1  Thu Apr 10 2003
     - Cleaned up code!
 
-0.08  Sun Apr 13
+0.08  Sun Apr 13 2003
     - Removed documentation of the (probably) unnecessary
       _reset_parse() method.
     - Cleaned up code a bit, again.
@@ -54,15 +54,15 @@ Revision history for Perl extension Lingua::TokenParse.
     - Updated eg/sample0 (accordance with the module's SYNOPSIS).
     - Added an eg/README file to describe the sample programs.
 
-0.08.1  Mon Apr 14
+0.08.1  Mon Apr 14 2003
     - Refactored eg/dict_fetch and made it vastly more simple.
     - Fixed documentation.
 
-0.08.2  Mon Apr 14
+0.08.2  Mon Apr 14 2003
     - Ack!  I left the lexicon and a debugging script in my eg/
       directory.  : (
 
-0.09  Sun Apr 20
+0.09  Sun Apr 20 2003
     - Made the fragment definition separator an object attribute and
       changed it to a "+" by default, in the constructor.
     - Added eg/set_entry and updated eg/README accordingly.
@@ -78,16 +78,23 @@ Revision history for Perl extension Lingua::TokenParse.
       globals used by the build_combinations() method into object
       attributes.
 
-0.10  Sun Apr 29
+0.10  Sun Apr 29 2003
     - Added user defined, regular expression trimming support.
     - Updated eg/sample0 and the test script, appropriately.
     - Fixed and enhanced documentation.
 
-0.10.1  Mon Apr 30
+0.10.1  Mon Apr 28 2003
     - Fixed and enhanced documentation.
 
-0.10.2  Mon Apr 30
+0.10.2  Mon Apr 28 2003
     - Made the constructor accept a separator argument.
     - Updated the eg/sample0 program.
     - Whoops.  Added the forgotten eg/set_entry to the MANIFEST.
     - Fixed documentation as usual...
+
+0.11  Thu May 1 2003
+    - Made the trim_knowns() method work for "defined but false"
+      lexicon entries.
+    - Updated documentation.
+    - Updated eg/sample0 accordingly.
+    - Repaired dates in the Changes file.

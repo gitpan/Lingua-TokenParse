@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.10.2';
+$VERSION = '0.11';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -183,7 +183,7 @@ sub build_knowns {  # {{{
 
         $combo = join '.', @chunks;
 
-        # Save this combination with it's familiarity ratio.
+        # Save this combination with its familiarity ratio.
         $self->knowns->{$combo} = [
             $frag_sum / @chunks,
             $char_sum / $self->{_word_length}
@@ -233,8 +233,8 @@ sub trim_knowns {  # {{{
         push @seen, scalar _hyphenate($unknown, $self->lexicon)
             if $unknown;
 
-        # Assign the score of the trimmed combination from the "all
-        # combinations list.
+        # Add the combo to the trimmed combinations list and assign
+        # the score from the "all possible combinations" list.
         $combo = join '.', @seen;
         $trimmed{$combo} = $self->knowns->{$combo};
     }
@@ -246,12 +246,11 @@ sub trim_knowns {  # {{{
         # index() function.
         my $flag = -1;
 
-        # Inspect each combination chunk.
+        # Inspect each unknown chunk.
         for my $chunk (split /\./, $combo) {
-            next if $self->definitions->{$chunk};
+            next if defined $self->definitions->{$chunk};
 
-            # Loops through the defined fragments.
-            # Does the unknown chunk contain a defined lexicon entry?
+            # Do we contain a defined lexicon entry?
             for my $entry (
                 grep { defined $self->definitions->{$_} }
                     sort keys %{ $self->definitions }
@@ -259,8 +258,7 @@ sub trim_knowns {  # {{{
                 # Strip off the stem-hyphen, if it exists.
                 $entry =~ s/-//;
 
-                # Flag the combination as bogus, if it has an
-                # unknown bit that contains a known fragment.
+                # Set the flag if we contain a known fragment.
                 $flag = index $chunk, $entry;
 
                 # Bail out, if we found a bogus combination.
@@ -279,7 +277,7 @@ sub trim_knowns {  # {{{
     for my $combo (sort keys %trimmed) {
         my $flag = 0;
 
-        # Flag matching rules.
+        # Flag matching rules as bogus.
         for my $rule (@{ $self->rules }) {
             if ($combo =~ /$rule/) {
                 $flag++;
@@ -319,8 +317,8 @@ sub output_knowns {  # {{{
 
     my $header = <<HEADER;
 Combination [fragment familiarity, character familiarity]
-Fragment definitions (with the defined fragment separator and a ?
-character for unknowns).
+Fragment definitions (with the fragment separator, a period for known
+but not defined, and a question mark for unknowns).
 
 HEADER
 
@@ -333,8 +331,10 @@ HEADER
         my @definition;
         for my $chunk (split /\./) {
             push @definition,
-                $self->definitions->{$chunk}
+                defined $self->definitions->{$chunk}
                     ? $self->definitions->{$chunk}
+                        ? $self->definitions->{$chunk}
+                        : '.'
                     : '?';
         }
 
@@ -362,9 +362,8 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
   my %lexicon;
   @lexicon{qw(art ion ti)} = qw(foo bar baz);
   my $obj = Lingua::TokenParse->new(
-      word      => $word,
-      lexicon   => \%lexicon,
-      separator => ' ~ ',
+      word    => $word,
+      lexicon => \%lexicon,
   );
   print scalar $obj->output_knowns;
 
@@ -372,12 +371,12 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
   $obj->word('metaphysical');
   $obj->lexicon({
       'meta-' => 'more comprehensive',
-      'ta'    => 'foo',
+      'ta'    => '',
       'phys'  => 'natural science, singular',
       '-ic'   => 'being, containing',
       '-al'   => 'relating to, characterized by',
   });
-  $obj->rules([ qr/^me\./ ]);  # Yank combos that start with "me."
+  $obj->rules([ qr/^me\./ ]);  # Remove combos that start with "me."
   $obj->parse;
   my @knowns = $obj->output_knowns;
 
@@ -395,13 +394,15 @@ partition this word into combinations of these (possibly overlapping)
 parts.  Each of these combinations can be given a score, which 
 represents a measure of familiarity.
 
-Currently, this familiarity measure is a simple ratio of known to 
+This familiarity measure is a set of simple ratios of known to 
 unknown parts.
 
 Note that the lexicon must have definitions for each entry, in order 
-to have the current trim_knowns() method do the right thing.
+to have the current trim_knowns() method do the right thing.  The 
+definition can be an empty string (i.e. '').  If the definition is 
+undefined, the fragment is considered an unknown.
 
-* Check out the sample code in the distribution's eg/ directory for 
+Please see the sample code in the distributions eg/ directory for 
 examples of how this module can be used.
 
 =head1 METHODS
@@ -409,8 +410,9 @@ examples of how this module can be used.
 =head2 new()
 
   $obj = Lingua::TokenParse->new(
-      word    => $word,
-      lexicon => \%lexicon,
+      word      => $word,
+      lexicon   => \%lexicon,
+      separator => $separator,
   );
 
 Return a new Lingua::TokenParse object.
@@ -583,8 +585,6 @@ of time to parse and possibly longer.  Please write to me with much
 needed improvements.
 
 =head1 TO DO
-
-Add user defined, known combination rule trimming callbacks.
 
 Compute the time required for a given parse.
 

@@ -388,8 +388,8 @@ a + b + ? + b + d'
 
 my $scalar_out =  # {{{
 'Combination [fragment familiarity, character familiarity]
-Fragment definitions (with the defined fragment separator and a ?
-character for unknowns).
+Fragment definitions (with the fragment separator, a period for known
+but not defined, and a question mark for unknowns).
 
 part.i.tion [1.00, 1.00]
 a + b + c

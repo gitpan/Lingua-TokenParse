@@ -8,9 +8,8 @@
   my %lexicon;
   @lexicon{qw(art ion ti)} = qw(foo bar baz);
   my $obj = Lingua::TokenParse->new(
-      word      => $word,
-      lexicon   => \%lexicon,
-      separator => ' ~ ',
+      word    => $word,
+      lexicon => \%lexicon,
   );
   print scalar $obj->output_knowns;
 
@@ -18,7 +17,7 @@
   $obj->word('metaphysical');
   $obj->lexicon({
       'meta-' => 'more comprehensive',
-      'ta'    => 'foo',
+      'ta'    => '',
       'phys'  => 'natural science, singular',
       '-ic'   => 'being, containing',
       '-al'   => 'relating to, characterized by',
