@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.08';
+$VERSION = '0.08.1';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -339,12 +339,11 @@ represents a measure of familiarity.
 Currently, this familiarity mesasure is a simple ratio of known to 
 unknown parts.
 
-* Please note that your lexicon absolutely must have definitions for 
-each entry in order to have the current trim_knowns() method do the 
-right thing.  Yes, this will be fixed in a coming version...  : )
+Note that the lexicon must have definitions for each entry, in order 
+to have the current trim_knowns() method do the right thing.
 
-* Please check out the sample code in the distribution's eg/ 
-directory for exciting examples of how this module can be used.
+* Check out the sample code in the distribution's eg/ directory for 
+examples of how this module can be used.
 
 =head1 METHODS
 
@@ -392,10 +391,9 @@ Compute the familiar word part combinations, accessed via the knowns()
 method.
 
 This method handles word parts containing prefix and suffix hyphens,
-which are found in the dict.org sever (with web1913 database).  These
-hyphens actually "encode" information about what is a syntactically 
-legal word combination.  Which can be used to score (or just throw 
-out bogus combinations).
+which encode information about what is a syntactically illegal word 
+combination.  This can be used to score (or throw out bogus 
+combinations).
 
 =head2 build_definitions()
 
@@ -413,7 +411,9 @@ unknown fragments concatinated.
 
 =head2 output_knowns()
 
-  print $obj->output_knowns();
+  print scalar $obj->output_knowns();
+
+  @knowns = $obj->output_knowns();
 
 Convenience method to return the familiar word part combinations with
 their familiarity scores (rounded to two decimals) and semicolon 
@@ -453,7 +453,7 @@ The array reference of word partitions.
 Note that this method is only useful for fetching, since the parts 
 are computed by the build_parts() method.
 
-=head2 combinations()
+=head2 combinations();
 
   $combinations = $obj->combinations();
 
@@ -490,14 +490,15 @@ None
 This module uses some clunky, inefficient algorithms.  For instance,
 a 50 letter word (like a medical term) just might take until the end
 of time to parse and possibly longer.  Please write to me with 
-improvements!
+ much needed improvements!
 
 =head1 TO DO
 
 Calculate familiarity with more granularity.  Possibly with a
 multidimensional measure.
 
-Handle the build_combinations method and related globals correctly.
+Handle the build_combinations method and related globals better, 
+somehow.
 
 Compute the time required for a given parse.
 

@@ -1,47 +1,29 @@
 #!/usr/bin/perl -w
 use strict;
 use DB_File;
-use Net::Ping;
+use Net::Dict;
 
-# NOTE: I suppose that you could use the Net::Dict perl module, if
-# the single qx// line (below) is not verbose enough for you.
+# Make a connection to a dictionary server.
+my $server   = shift || 'dict.org';
+my $database = shift || 'web1913';
 
-# The dict server and database to use, if we want to fetch our lexicon.
-my ($server, $database) = ('dict.org', 'web1913');
+my $dict = Net::Dict->new($server, Debug => 0) or
+    die "Can't reach $server to fetch dictionary entries.\n";
+$dict->setDicts($database);
 
-print "Fetch the lexicon from $server with $database (and save it as a dbm).\n";
-
-# Can we even talk to the dictionary server?
-my $p = Net::Ping->new();
-die "Oof.  The $server server is not alive.  Can't fetch dictionary entries.\n"
-    unless $p->ping($server);
+print 'Fetch the lexicon from ', $dict->dbTitle($database),
+    " (and save it as a dbm).\n";
 
 # Open our lexicon dbm.
 my %lexicon;
-tie %lexicon, 'DB_File', 'lexicon';
+tie %lexicon, 'DB_File', 'lexicon' or
+    die "Can't tie to ./lexicon - $!\n";
 
-# Add the prefix dictionary entries to our lexicon.
-dict_fetch($server, $database);
+# Add the suffixes and prefixes to the lexicon (without
+# definitions).
+for (qw(^[a-z].*-$ ^-[a-z].*$)) {
+    @lexicon{ map { $_->[1] } @{ $dict->match($_, 're') } } = ();
+}
 
 # Close our dbm lexicon.
 untie %lexicon;
-
-sub dict_fetch {
-    my ($server, $database) = @_;
-
-    # Make two calls for all prefixes and suffixes.
-    for (qw('^[a-z].*-\$' '^-[a-z].*\$')) {
-        # Call the dict server and get the lexicon fragments.
-        my @frags = qx/dict -h $server -d $database -match -strategy re $_/;
-        # The fragments probably have extra junk.
-        chomp @frags;
-        @frags = map {
-            s/web1913 : //;
-            lc;
-        } @frags;
-        # We might not really care about single letter fragments.
-        @frags = grep { length > 1 } @frags;
-        # Add them to our lexicon (without definitions).
-        @lexicon{@frags} = ();
-    }
-}

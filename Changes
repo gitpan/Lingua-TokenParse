@@ -53,3 +53,7 @@ Revision history for Perl extension Lingua::TokenParse.
     - Added the output_knowns() method to the test suite.
     - Updated eg/sample0 (accordance with the module's SYNOPSIS).
     - Added an eg/README file to describe the sample programs.
+
+0.08.1  Mon Apr 14
+    - Refactored eg/dict_fetch and made it vastly more simple.
+    - Fixed documentation.
