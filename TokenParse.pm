@@ -2,13 +2,13 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.10';
+$VERSION = '0.10.1';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
 # reams of source, like me.
-
-# NOTE: I sort things in loops for debugging purposes only.
+#
+# Also note that things are sorted in loops for debugging purposes only.
 
 sub new {  # {{{
     my ($class, %args) = @_;
@@ -376,7 +376,7 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
       '-ic'   => 'being, containing',
       '-al'   => 'relating to, characterized by',
   });
-  $obj->rules([ qr/^me\./ ]);
+  $obj->rules([ qr/^me\./ ]);  # Yank combos that start with "me."
   $obj->parse;
   my @knowns = $obj->output_knowns;
 
@@ -468,6 +468,8 @@ via the definitions() method.
 Trim the hash of known combinations by concatinating adjacent unknown
 fragments and throwing out combinations with a score of zero.
 
+The end of this method is where user defined rules are processed.
+
 =head2 output_knowns()
 
   print scalar $obj->output_knowns();
@@ -552,28 +554,32 @@ fragments are defined as an empty string.
 
   $separator = $obj->separator($separator);
 
-The character or (characters) separating the fragment definitions that
+The character (or characters) separating the fragment definitions that
 are produced by the output_knowns() method.
 
 The default is ' + ' (a plus symbol surrounded by single spaces).
 
 =head2 rules()
 
-  $rules = $obj->rules($rules);
+  $rules = $obj->rules(\@rules);
 
 An optional, user defined array of regular expressions to apply to 
 the list of known combinations.  If a match is successful, the entry
 is removed from the list.
+
+To reiterate, this is a negative, pruning device, that is used in the
+trim_knowns() method.
 
 =head1 DEPENDENCIES
 
 None
 
 =head1 DISCLAIMER
+
 This module uses some clunky, inefficient algorithms.  For instance,
 a 50 letter word (like a medical term) just might take until the end
 of time to parse and possibly longer.  Please write to me with much 
-needed improvements!
+needed improvements.
 
 =head1 TO DO
 

@@ -78,6 +78,10 @@ Revision history for Perl extension Lingua::TokenParse.
       globals used by the build_combinations() method into object
       attributes.
 
-0.10
-    - Added user defined, trimming regular expression support.
+0.10  Sun Apr 29
+    - Added user defined, regular expression trimming support.
+    - Updated eg/sample0 and the test script, appropriately.
+    - Fixed and enhanced documentation.
+
+0.10.1
     - Fixed and enhanced documentation.

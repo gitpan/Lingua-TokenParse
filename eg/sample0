@@ -22,6 +22,6 @@
       '-ic'   => 'being, containing',
       '-al'   => 'relating to, characterized by',
   });
-  $obj->rules([ qr/^me\./ ]);
+  $obj->rules([ qr/^me\./ ]);  # Yank combos that start with "me."
   $obj->parse;
   my @knowns = $obj->output_knowns;
