@@ -1,13 +1,14 @@
 package Lingua::TokenParse;
 
 use strict;
-use vars qw($VERSION); $VERSION = '0.12.3';
+use vars qw($VERSION);
+$VERSION = '0.13';
 
-# NOTE: The {{{ and }}} things are "editor code fold markers".  They
-# are merely a convenience for people who don't care to scroll through
-# reams of source, like me.  vim++ (C<http://www.vim.org>, of course.)
+# The {{{ and }}} markers are "editor code fold".  They are merely a
+# convenience for people who don't care to scroll through reams of
+# source.
 #
-# Also note that things are sorted in loops for debugging purposes only.
+# Things are sorted in loops for debugging purposes only.
 
 sub new {  # {{{
     my ($class, %args) = @_;
@@ -146,9 +147,13 @@ sub build_parts {  # {{{
 
 sub build_combinations {  # {{{
     my ($self, $i) = @_;
+
+    # What iteration through the combo list are we?
     $i = 0 unless defined $i;
+    # Initialise the previous iteration to zero the first time.
     $self->{_prev} = 0 unless defined $self->{_prev};
 
+    # Loop through the combinations.
     for (@{ $self->parts->[$i] }) {
         # Find the end-position of the stem.
         my $n = $i + length;
@@ -160,8 +165,10 @@ sub build_combinations {  # {{{
 
 #print "$_ - i: $i, n: $n, prev: $self->{_prev}, new: ". @{ $self->{_new} } ."\n";
 
+        # Remember where we were.
         $self->{_prev} = $i;
 
+        # Shove this combo in place of 
         splice @{ $self->{_new} }, @{ $self->{_new} }, $n, $_;
 
         push @{ $self->combinations }, join '.', @{ $self->{_new} }
@@ -189,16 +196,17 @@ sub build_knowns {  # {{{
             # Handle hyphens in lexicon entries.
             ($_, my $combo_seen) = _hyphenate($_, $self->lexicon, 0);
 
-            # Sum the combination familiarity value.
+            # Sum the combination familiarity values.
             if ($combo_seen) {
                 $frag_sum++;
                 $char_sum += length;
             }
         }
 
+        # Stick our combination back together.
         $combo = join '.', @chunks;
 
-        # Save this combination with its familiarity ratio.
+        # Save this combination and its familiarity ratios.
         $self->knowns->{$combo} = [
             $frag_sum / @chunks,
             $char_sum / $self->{_word_length}
@@ -211,9 +219,9 @@ sub build_definitions {  # {{{
     # Save combination entries with their definitions as the values.
     for my $combo (keys %{ $self->knowns }) {
         for (split /\./, $combo) {
-            $self->definitions->{$_} =
-                exists $self->lexicon->{$_}
-                    ? $self->lexicon->{$_} : undef
+            $self->definitions->{$_} = exists $self->lexicon->{$_}
+                ? $self->lexicon->{$_}
+                : undef
         }
     }
 }  # }}}
@@ -309,6 +317,12 @@ sub trim_knowns {  # {{{
     $self->knowns(\%trimmed);
 }  # }}}
 
+sub learn {  # {{{
+    my ($self, %args) = @_;
+    # Get the list of (partially) unknown stem combinations.
+    # Loop through each looking in %args or prompting for a definition.
+}  # }}}
+
 # Update the given string with it's actual lexicon value and increment
 # the seen flag.
 sub _hyphenate {  # {{{
@@ -334,9 +348,8 @@ sub output_knowns {  # {{{
     my @out = ();
 
     my $header = <<HEADER;
-Combination [fragment familiarity, character familiarity]
-Fragment definitions (with the fragment separator, a period for known
-but not defined, and a question mark for unknowns).
+Combination [frag familiarity, char familiarity]
+Fragment definitions
 
 HEADER
 
@@ -358,7 +371,8 @@ HEADER
 
         push @out, sprintf qq/%s [%s]\n%s/,
             $_,
-            join (', ', map { sprintf '%0.2f', $_ } @{ $self->knowns->{$_} }),
+            join (', ', map { sprintf '%0.2f', $_ }
+                @{ $self->knowns->{$_} }),
             join ($self->separator, @definition);
     }
 
@@ -406,24 +420,23 @@ lexicon of known word parts.
 
 A word like "partition" is actually composed of a few different word
 parts.  Given a lexicon of known fragments, it is possible to 
-partition this word into combinations of these (possibly overlapping)
-parts.  Each of these combinations can be given a score, which 
-represents a measure of familiarity.
+partition this word into possibly overlapping fragment combinations.
 
-This familiarity measure is a set of simple ratios of known to 
-unknown parts.
+Each of these combinations can be given a score, which represents a 
+measure of word familiarity.  This measure is a set of simple ratios 
+of known to unknown parts.
 
-Note that the lexicon must have definitions for each entry, in order 
-to have the current trim_knowns method do the right thing.  The 
-definition can be an empty string (i.e. '').  If the definition is 
+The lexicon must have a definition for each entry, in order to have 
+the current C<trim_knowns> method do the right thing.  The definition 
+can be an empty string (i.e. '').  However, if the definition is 
 undefined, the fragment is considered an unknown.
 
-Please see the sample code in the distributions eg/ directory for 
+Please see the sample code in the distribution eg/ directory for 
 examples of how this module can be used.
 
 =head1 METHODS
 
-=head2 new()
+=head2 new(%arguments)
 
   $obj = Lingua::TokenParse->new(
       word        => $word,
@@ -460,7 +473,7 @@ mark (?).
 
 =head2 parse()
 
-  $obj->parse();
+  $obj->parse;
 
 This method resets the partition lists and then calls all the 
 indiviual parsing methods that are detailed below.
@@ -470,21 +483,21 @@ optionally, a new lexicon.
 
 =head2 build_parts()
 
-  $obj->build_parts();
+  $obj->build_parts;
 
 Construct an array of the word partitions, accessed via the parts
 method.
 
 =head2 build_combinations()
 
-  $obj->build_combinations();
+  $obj->build_combinations;
 
 Recursively compute the array of all possible word part combinations,
 accessed via the combinations method.
 
 =head2 build_knowns()
 
-  $obj->build_knowns();
+  $obj->build_knowns;
 
 Compute the familiar word part combinations, accessed via the knowns
 method.
@@ -496,7 +509,7 @@ combinations).
 
 =head2 build_definitions()
 
-  $obj->build_definitions();
+  $obj->build_definitions;
 
 Construct a hash of the definitions of the word parts in each 
 combination in the keys of the knowns hash.  This hash is accessed
@@ -504,7 +517,7 @@ via the definitions method.
 
 =head2 trim_knowns()
 
-  $obj->trim_knowns();
+  $obj->trim_knowns;
 
 Trim the hash of known combinations by concatinating adjacent unknown
 fragments and throwing out combinations with a score of zero.
@@ -513,9 +526,9 @@ The end of this method is where user defined rules are processed.
 
 =head2 output_knowns()
 
-  print scalar $obj->output_knowns();
+  print scalar $obj->output_knowns;
 
-  @knowns = $obj->output_knowns();
+  @knowns = $obj->output_knowns;
 
 Convenience method to return the familiar word part combinations with
 their familiarity scores (rounded to two decimals) and fragment 
@@ -528,8 +541,8 @@ fragment definitions is a separate entry in an array.
 Here is the format of the output:
 
   Combination [fragment familiarity, character familiarity]
-  Fragment definitions (with the defined fragment separator and a ?
-  character for unknowns).
+  Fragment definitions (with the defined fragment and unknown
+  separator).
 
 =head1 ACCESSORS
 
@@ -557,44 +570,43 @@ not_defined and unknown strings.
 
 The lexicon is a hash reference with word fragments as keys and
 definitions their respecive values.  Definitions must be defined in 
-order for the trim_knowns method to work properly.
+order for the C<trim_knowns> method to work properly.
 
 =head2 parts()
 
-  $parts = $obj->parts();
+  $parts = $obj->parts;
 
 The array reference of word partitions.
 
-Note that this method is only useful for fetching, since the parts 
-are computed by the build_parts method.
+This method is only useful for fetching, since the parts are computed 
+by the C<build_parts> method.
 
 =head2 combinations()
 
-  $combinations = $obj->combinations();
+  $combinations = $obj->combinations;
 
 The array reference of all possible word part combinations.
 
-Note that this method is only useful for fetching, since the 
-combinations are computed by the build_combinations method.
+This method is only useful for fetching, since the combinations are 
+computed by the C<build_combinations> method.
 
 =head2 knowns()
 
-  $knowns = $obj->knowns();
+  $knowns = $obj->knowns;
 
 The hash reference of known combinations (keys) with their 
 familiarity scores (values).  Note that only the non-zero scored 
 combinations are kept.
 
-Note that this method is only useful for fetching, since the knowns
-are computed by the build_knowns method.
+This method is only useful for fetching, since the knowns are 
+computed by the C<build_knowns> method.
 
 =head2 definitions()
 
-  $definitions = $obj->definitions();
+  $definitions = $obj->definitions;
 
 The hash reference of the definitions provided for each fragment of 
-the combinations in the knowns hash.  Note that the values of unknown
-fragments are set to undef.
+the combinations with the values of unknown fragments set to undef.
 
 =head2 rules()
 
@@ -605,22 +617,22 @@ apply to the list of known combinations.  If a match is successful,
 the entry is removed from the list.
 
 To reiterate, this is a negative, pruning device, that is used in the
-trim_knowns method.
+C<trim_knowns> method.
 
 =head2 separator()
 
   $separator = $obj->separator($separator);
 
 The separator is the string used to separate fragment definitions in
-the output_knowns method.  The default is a plus symbol surrounded 
+the C<output_knowns> method.  The default is a plus symbol surrounded 
 by single spaces (' + ').
 
 =head2 not_defined()
 
   $not_defined = $obj->not_defined($not_defined);
 
-The not_defined argument is the the string used by the output_knowns 
-method to indicate a known fragment that has no 
+The not_defined argument is the the string used by the 
+C<output_knowns> method to indicate a known fragment that has no 
 definition.  The default is a period (.).
 
 =head2 unknown()
@@ -639,19 +651,37 @@ None
 
 This module uses some clunky, inefficient algorithms.  For instance,
 a 50 letter word (like a medical term) just might take until the end
-of time to parse and possibly longer.  Please write to me with much 
-needed improvements.
+of time to parse and possibly longer.  Only I have been able to devise
+alternate algorithms even though I have asked for all over for 
+years now...  Please write to me with improvements.
 
 =head1 TO DO
 
 Compute the time required for a given parse.
 
+Use traditional stemming to trim down the common knowns.
+
+Make a method to request definitions for unknown fragments and call
+it C<learn>.
+
+Make the output_knowns() method suck less.
+
 Synthesize a term list based on word part (thesaurus) definitions.
-(That is, go in reverse. Non-trivial!)
+That is, go in reverse.  Non-trivial!
+
+=head1 SEE ALSO
+
+Notice that there is nothing but this sentence in this section?
 
 =head1 DEDICATION
 
-My Grandmother and English teacher - Frances Jones
+For my Grandmother and English teacher
+
+Frances Jones E<lt>frances@theletterlink.comE<gt>
+
+=head1 CVS
+
+$Id: TokenParse.pm,v 1.4 2004/02/07 05:12:56 gene Exp $
 
 =head1 AUTHOR
 
@@ -659,7 +689,7 @@ Gene Boggs E<lt>gene@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2003 by Gene Boggs
+Copyright (C) 2003-2004 by Gene Boggs
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

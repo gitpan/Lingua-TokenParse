@@ -4,7 +4,9 @@ use Test::More tests => 8;
 BEGIN { use_ok('Lingua::TokenParse') };
 
 # Testing variables {{{
-my $parts = [  # {{{
+# word=partition is n=9 letters
+# parts=sum(n)=45 {{{
+my $parts = [
     [
         'p',
         'pa',
@@ -70,7 +72,8 @@ my $parts = [  # {{{
     ],
 ];  # }}}
 
-my $combinations = [  # {{{
+# combinations=2^(n-1)=256 {{{
+my $combinations = [
     'p.a.r.t.i.t.i.o.n',
     'p.a.r.t.i.t.i.on',
     'p.a.r.t.i.t.io.n',
@@ -387,9 +390,8 @@ a + b + ? + b + d'
 ];  # }}}
 
 my $scalar_out =  # {{{
-'Combination [fragment familiarity, character familiarity]
-Fragment definitions (with the fragment separator, a period for known
-but not defined, and a question mark for unknowns).
+'Combination [frag familiarity, char familiarity]
+Fragment definitions
 
 part.i.tion [1.00, 1.00]
 a + b + c
