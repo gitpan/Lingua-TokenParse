@@ -2,14 +2,11 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.08.2';
+$VERSION = '0.09';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
 # reams of source, like me.
-
-# Globals used by the build_combinations method.
-my (@parsed, @new, $prev);
 
 sub new {  # {{{
     my ($class, %args) = @_;
@@ -18,18 +15,23 @@ sub new {  # {{{
         # The word to parse!
         word         => $args{word} || undef,
         # We need to use the length of our word in a few methods.
-        word_length  => exists $args{word} ? length ($args{word}) : undef,
-        # The list of known tokens.
+        _word_length => exists $args{word} ? length ($args{word}) : undef,
+        # Known tokens.
         lexicon      => $args{lexicon} || {},
-        # The list of all word parts.
+        # All word parts.
         parts        => [],
-        # The list of all possible parts combinations.
+        # All possible parts combinations.
         combinations => [],
-        # The scored list of the known parts combinations.
+        # Scored list of the known parts combinations.
         knowns       => {},
-        # The list of definitions of the known and unknown fragments
-        # in knowns.
+        # Definitions of the known and unknown fragments in knowns.
         definitions  => {},
+        # Fragment definition separator.
+        separator    => ' + ',
+        # Globals used by the build_combinations method (and
+        # initialized by the _reset_parse() method).
+        _new  => [],
+        _prev => 0,
     };
 
     bless $self, $class;
@@ -44,7 +46,7 @@ sub word {  # {{{
     my $self = shift;
     if (@_) {
         $self->{word} = shift;
-        $self->{word_length} = length $self->{word};
+        $self->{_word_length} = length $self->{word};
     }
     return $self->{word};
 }  # }}}
@@ -78,6 +80,12 @@ sub definitions {  # {{{
     $self->{definitions} = shift if @_;
     return $self->{definitions};
 }  # }}}
+
+sub separator {  # {{{
+    my $self = shift;
+    $self->{separator} = shift if @_;
+    return $self->{separator};
+}  # }}}
 # }}}
 
 sub _reset_parse {  # {{{
@@ -86,8 +94,7 @@ sub _reset_parse {  # {{{
     $self->combinations([]);
     $self->knowns({});
     $self->definitions({});
-    @parsed = ();
-    @new    = ();
+    $self->{_new} = [];
 }  # }}}
 
 sub parse {  # {{{
@@ -114,8 +121,8 @@ sub build_parts {  # {{{
 
 sub build_combinations {  # {{{
     my ($self, $i) = @_;
-    $i    = 0 unless defined $i;
-    $prev = 0 unless defined $prev;
+    $i = 0 unless defined $i;
+    $self->{_prev} = 0 unless defined $self->{_prev};
 
     for (@{ $self->parts->[$i] }) {
         # Find the end-position of the stem.
@@ -124,15 +131,15 @@ sub build_combinations {  # {{{
         # XXX This is an ugly mystery-hack:
         # Yank-off the last two stems found, if we are at an
         # "overlap point".
-        splice @new, -2 if $prev > $i;
+        splice @{ $self->{_new} }, -2 if $self->{_prev} > $i;
 
-#print "$_ - i: $i, n: $n, prev: $prev, new: ". @new ."\n";
+#print "$_ - i: $i, n: $n, prev: $self->{_prev}, new: ". @{ $self->{_new} } ."\n";
 
-        $prev = $i;
+        $self->{_prev} = $i;
 
-        splice @new, @new, $n, $_;
+        splice @{ $self->{_new} }, @{ $self->{_new} }, $n, $_;
 
-        push @{ $self->combinations }, join '.', @new
+        push @{ $self->combinations }, join '.', @{ $self->{_new} }
             if $n == length ($self->word);
 
         $self->build_combinations($n);
@@ -144,7 +151,11 @@ sub build_knowns {  # {{{
 
     # Show familiar combinations for each "raw" combination.
     for my $combo (@{ $self->combinations }) {
+        # Skip combinations that have already been seen.
+        next if exists $self->knowns->{$combo};
+
         my $sum = 0;
+        my ($frag_sum, $char_sum) = (0, 0);
 
         # Get the bits of the combination.
         my @chunks = split /\./, $combo;
@@ -154,15 +165,19 @@ sub build_knowns {  # {{{
             ($_, my $flag) = _hyphenate($_, $self->lexicon, 0);
 
             # Sum the combination familiarity value.
-            $sum++ if $flag;
+            if ($flag) {
+                $frag_sum++;
+                $char_sum += length;
+            }
         }
 
         $combo = join '.', @chunks;
 
-        # Save this combination with the familiarity ratio as the
-        # value.
-        $self->knowns->{$combo} = $sum / @chunks
-            if $sum and !exists $self->knowns->{$combo};
+        # Save this combination with it's familiarity ratio.
+        $self->knowns->{$combo} = [
+            $frag_sum / @chunks,
+            $char_sum / $self->{_word_length}
+        ];
     }
 }  # }}}
 
@@ -185,6 +200,9 @@ sub trim_knowns {  # {{{
 
     # Make a familiar combination from each "raw" combination.
     for my $combo (keys %{ $self->knowns }) {
+        # Skip combinations that have already been seen.
+        next if exists $trimmed{$combo};
+
         # Get the bits of the combination.
         my @chunks = split /\./, $combo;
         my @seen = ();
@@ -205,6 +223,8 @@ sub trim_knowns {  # {{{
         push @seen, scalar _hyphenate($unknown, $self->lexicon)
             if $unknown;
 
+        # Assign the score of the trimmed combination from the "all
+        # combinations list.
         $combo = join '.', @seen;
         $trimmed{$combo} = $self->knowns->{$combo};
     }
@@ -271,9 +291,18 @@ sub output_knowns {  # {{{
     my $self = shift;
     my @out = ();
 
-    for (reverse
-             sort { $self->knowns->{$a} <=> $self->knowns->{$b} }
-                 keys %{ $self->knowns }
+    my $header = <<HEADER;
+Combination [fragment familiarity, character familiarity]
+Fragment definitions (with the defined fragment separator and a ?
+character for unknowns).
+
+HEADER
+
+    for (reverse sort {
+            $self->knowns->{$a}[0] <=> $self->knowns->{$b}[0]
+            ||
+            $self->knowns->{$a}[1] <=> $self->knowns->{$b}[1]
+        } keys %{ $self->knowns }
     ) {
         my @definition;
         for my $chunk (split /\./) {
@@ -283,11 +312,13 @@ sub output_knowns {  # {{{
                     : '?';
         }
 
-        push @out, sprintf qq/%s: %0.2f\n"%s"/,
-            $_, $self->knowns->{$_}, join '; ', @definition;
+        push @out, sprintf qq/%s [%s]\n%s/,
+            $_,
+            join (', ', map { sprintf '%0.2f', $_ } @{ $self->knowns->{$_} }),
+            join ($self->separator, @definition);
     }
 
-    return wantarray ? @out : join "\n\n", @out;
+    return wantarray ? @out : $header . join "\n\n", @out;
 }  # }}}
 
 1;
@@ -336,7 +367,7 @@ partition this word into combinations of these (possibly overlapping)
 parts.  Each of these combinations can be given a score, which 
 represents a measure of familiarity.
 
-Currently, this familiarity mesasure is a simple ratio of known to 
+Currently, this familiarity measure is a simple ratio of known to 
 unknown parts.
 
 Note that the lexicon must have definitions for each entry, in order 
@@ -363,8 +394,8 @@ below) if a word and lexicon are provided.
 
   $obj->parse();
 
-This is a convenience method that simply calls all the indiviual 
-parsing methods that are detailed below.
+This method resets the partition lists and then calls all the 
+indiviual parsing methods that are detailed below.
 
 Call this method after resetting the object with a new word and 
 optionally, a new lexicon.
@@ -392,7 +423,7 @@ method.
 
 This method handles word parts containing prefix and suffix hyphens,
 which encode information about what is a syntactically illegal word 
-combination.  This can be used to score (or throw out bogus 
+combination, which can be used to score (or even throw out bogus
 combinations).
 
 =head2 build_definitions()
@@ -400,14 +431,15 @@ combinations).
   $obj->build_definitions();
 
 Construct a hash of the definitions of the word parts in each 
-combination in the keys of the knowns hash.
+combination in the keys of the knowns hash.  This hash is accessed
+via the definitions() method.
 
 =head2 trim_knowns()
 
   $obj->trim_knowns();
 
-Construct an array of the known combinations, with the adjacent 
-unknown fragments concatinated.
+Trim the hash of known combinations by concatinating adjacent unknown
+fragments and throwing out combinations with a score of zero.
 
 =head2 output_knowns()
 
@@ -416,20 +448,28 @@ unknown fragments concatinated.
   @knowns = $obj->output_knowns();
 
 Convenience method to return the familiar word part combinations with
-their familiarity scores (rounded to two decimals) and semicolon 
-separated, fragment definitions in either scalar or array context.
+their familiarity scores (rounded to two decimals) and fragment 
+definitions.
 
 In scalar context, a single, newline separated string is returned.
-In array context, each of these combinations is a separate entry in 
-an array.
+In array context, each of these scored combinations, with their 
+fragment definitions is a separate entry in an array.
+
+Here is the format of the output:
+
+  Combination [fragment familiarity, character familiarity]
+  Fragment definitions (with the defined fragment separator and a ?
+  character for unknowns).
 
 =head1 ACCESSORS
 
 These accessors both get and set their respective values.  Note 
-that, if you set any of these after construction, you must manually 
-run the partition methods.  Also, note that it is pretty useless to
-set the parts, combinations and knowns lists, as they are computed 
-by the partition methods.
+that, if you set either the word or lexicon after construction, you 
+must manually initialize the parse lists and run the partition 
+methods (via the parse() method).
+
+Also, note that it is useless to set the parts, combinations and 
+knowns lists, since they are computed by the partition methods.
 
 =head2 word()
 
@@ -494,11 +534,7 @@ of time to parse and possibly longer.  Please write to me with
 
 =head1 TO DO
 
-Calculate familiarity with more granularity.  Possibly with a
-multidimensional measure.
-
-Handle the build_combinations method and related globals better, 
-somehow.
+Add user defined, known combination rule timming callbacks.
 
 Compute the time required for a given parse.
 

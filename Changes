@@ -61,3 +61,19 @@ Revision history for Perl extension Lingua::TokenParse.
 0.08.2  Mon Apr 14
     - Ack!  I left the lexicon and a debugging script in my eg/
       directory.  : (
+
+0.09  Sun Apr 20
+    - Made the fragment definition separator an object attribute and
+      changed it to a "+" by default, in the constructor.
+    - Added eg/set_entry and updated eg/README accordingly.
+    - Skipped already seen combinations in the build_combinations()
+      and trim_knowns() methods.
+    - Made the known combination score a two dimensional measure and
+      fixed the output_knowns(), accordingly.
+    - Added a friendly, explanatory header to the scalar output of the
+      the output_knowns() method.
+    - Fixed and updated documentation.
+    - Fixed the call to output_knowns() in the eg/ programs.
+    - Removed the unused @parsed array and made the other (two)
+      globals used by the build_combinations() method into object
+      attributes.

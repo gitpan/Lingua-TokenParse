@@ -50,4 +50,4 @@ my $obj = Lingua::TokenParse->new(
 untie %lexicon if -e $lexicon_file;
 
 # Output the results.
-$obj->output_knowns;
+print scalar $obj->output_knowns;

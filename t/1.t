@@ -3,6 +3,7 @@ use Test::More tests => 7;
 
 BEGIN { use_ok('Lingua::TokenParse') };
 
+# Testing variables {{{
 my $parts = [  # {{{
     [
         'p',
@@ -329,70 +330,82 @@ my $combinations = [  # {{{
 ];  # }}}
 
 my $knowns = {  # {{{
-    'part.i.tion' => '1',
-    'part.i.t.i.on' => '0.8'
+    'part.i.tion' => [1, 1],
+    'part.i.t.i.on' => [0.8, 0.888888888888889]
 };  # }}}
 
 my $definitions = {  # {{{
     'a' => undef,
-    'arti' => undef,
-    'tio' => undef,
-    'on' => 'd',
-    'rt' => undef,
-    'io' => undef,
-    't' => undef,
-    'rtiti' => undef,
-    'parti' => undef,
-    'tion' => 'c',
-    'partiti' => undef,
-    'r' => undef,
-    'par' => undef,
-    'ition' => undef,
-    'ti' => undef,
-    'pa' => undef,
-    'partit' => undef,
-    'iti' => undef,
-    'i' => 'b',
-    'n' => undef,
-    'it' => undef,
-    'itio' => undef,
-    'art' => undef,
-    'part' => 'a',
-    'artit' => undef,
     'ar' => undef,
-    'p' => undef,
-    'titi' => undef,
+    'art' => undef,
+    'arti' => undef,
+    'artit' => undef,
+    'artiti' => undef,
+    'artitio' => undef,
+    'artition' => undef,
+    'i' => 'b',
+    'io' => undef,
     'ion' => undef,
-    'tit' => undef,
-    'rtit' => undef,
-    'rti' => undef,
+    'it' => undef,
+    'iti' => undef,
+    'itio' => undef,
+    'ition' => undef,
+    'n' => undef,
     'o' => undef,
-    'artiti' => undef
+    'on' => 'd',
+    'p' => undef,
+    'pa' => undef,
+    'par' => undef,
+    'part' => 'a',
+    'parti' => undef,
+    'partit' => undef,
+    'partiti' => undef,
+    'partitio' => undef,
+    'partition' => undef,
+    'r' => undef,
+    'rt' => undef,
+    'rti' => undef,
+    'rtit' => undef,
+    'rtiti' => undef,
+    'rtitio' => undef,
+    'rtition' => undef,
+    't' => undef,
+    'ti' => undef,
+    'tio' => undef,
+    'tion' => 'c',
+    'tit' => undef,
+    'titi' => undef,
+    'titio' => undef,
+    'tition' => undef,
 };  # }}}
 
 my $array_out = [  # {{{
-    'part.i.tion: 1.00
-"a; b; c"',
-    'part.i.t.i.on: 0.80
-"a; b; ?; b; d"'
+    'part.i.tion [1.00, 1.00]
+a + b + c',
+    'part.i.t.i.on [0.80, 0.89]
+a + b + ? + b + d'
 ];  # }}}
 
 my $scalar_out =  # {{{
-'part.i.tion: 1.00
-"a; b; c"
+'Combination [fragment familiarity, character familiarity]
+Fragment definitions (with the defined fragment separator and a ?
+character for unknowns).
 
-part.i.t.i.on: 0.80
-"a; b; ?; b; d"';
+part.i.tion [1.00, 1.00]
+a + b + c
+
+part.i.t.i.on [0.80, 0.89]
+a + b + ? + b + d';
+# }}}
 # }}}
 
 my %lexicon;
 @lexicon{qw(part i tion on)} = qw(a b c d);
 
-# new() automatically calls all the parsing methods.
-#
 my $obj = Lingua::TokenParse->new(
     word => 'partition',
     lexicon => \%lexicon,
+    score => 0,
 );
 
 is_deeply $obj->parts, $parts, 'word partitions';
