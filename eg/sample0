@@ -15,7 +15,6 @@ use strict;
   $obj->output_knowns;
 
   # Okay.  Now, let's parse a new word.
-  $obj->reset_parse;
   $obj->word('metaphysical');
   $obj->lexicon({
       'meta-' => 'more comprehensive',

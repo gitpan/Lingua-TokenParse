@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.06';
+$VERSION = '0.07';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -80,7 +80,7 @@ sub definitions {  # {{{
 }  # }}}
 # }}}
 
-sub reset_parse {  # {{{
+sub _reset_parse {  # {{{
     my $self = shift;
     $self->parts([]);
     $self->combinations([]);
@@ -92,6 +92,7 @@ sub reset_parse {  # {{{
 
 sub parse {  # {{{
     my $self = shift;
+    $self->_reset_parse;
     $self->build_parts;
     $self->build_combinations;
     $self->build_knowns;
@@ -313,7 +314,6 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
   $obj->output_knowns;
 
   # Okay.  Now, let's parse a new word.
-  $obj->reset_parse;
   $obj->word('metaphysical');
   $obj->lexicon({
       'meta-' => 'more comprehensive',
@@ -363,14 +363,14 @@ Return a new Lingua::TokenParse object.
 This method will automatically call the partition methods (detailed 
 below) if a word and lexicon are provided.
 
-=head2 reset_parse()
+=head2 _reset_parse()
 
-  $obj->reset_parse();
+  $obj->_reset_parse();
 
 Reset the lists used to parse a word into fragment combinations.
 
-That method must be called prior to reparsing a new word in the same 
-session.
+This method is automatically called prior to reparsing a new word in 
+the same session and should never need to be called explicitly.
 
 =head2 parse()
 
