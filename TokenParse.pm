@@ -2,7 +2,11 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.02';
+$VERSION = '0.03';
+
+# NOTE: The {{{ and }}} things are "editor code fold markers".  They
+# are merely a convenience for people who don't care to scroll through
+# reams of source, like me.
 
 sub new {  # {{{
     my ($class, %args) = @_;
@@ -19,13 +23,14 @@ sub new {  # {{{
 
     if ($args{word} and $args{lexicon}) {
         $self->build_parts;
-        $self->successors;
-        $self->trim_combinations;
+        $self->build_combinations;
+        $self->build_knowns;
     }
 
     return $self;
 }  # }}}
 
+# Accessors {{{
 sub word {  # {{{
     my $self = shift;
     $self->{word} = shift if @_;
@@ -55,6 +60,7 @@ sub knowns {  # {{{
     $self->{knowns} = shift if @_;
     return $self->{knowns};
 }  # }}}
+# }}}
 
 sub build_parts {  # {{{
     my $self = shift;
@@ -68,7 +74,34 @@ sub build_parts {  # {{{
     }
 }  # }}}
 
-sub trim_combinations {  # {{{
+# Globals used by the build_combinations method.
+my (@parsed, @new, $prev);
+sub build_combinations {  # {{{
+    my ($self, $i) = @_;
+    $i = 0 unless defined $i;
+    $prev = 0 unless defined $prev;
+
+    for (@{ $self->parts->[$i] }) {
+        # Find the end-position of the stem.
+        my $n = $i + length;
+
+        # XXX Ugly mystery-hack:
+        # Yank-off the last two stems found, if we are at an "overlap point".
+        splice @new, -2 if $prev > $i;
+
+#print "$_ - i: $i, n: $n, prev: $prev, new: ". @new ."\n";
+
+        $prev = $i;
+
+        splice @new, @new, $n, $_;
+
+        push @{ $self->combinations }, join '.', @new if $n == length ($self->word);
+
+        $self->build_combinations($n);
+    }
+}  # }}}
+
+sub build_knowns {  # {{{
     my $self = shift;
 
     # Make a familiar combination from each "raw" combination.
@@ -78,10 +111,25 @@ sub trim_combinations {  # {{{
         # Get the bits of the combination.
         my @chunks = split /\./, $combo;
 
-        # Compute the combination familiarity value and flag the
-        # unknown bits.
+        # Sum the combination familiarity value and flag the unknowns.
         for (@chunks) {
+            # Handle hyphens in lexicon entries.
+            # Thanks for saying, "That's probably how I would do
+            # that.", for this code, Kirsten.  readability++
+            my $flag = 0;
             if (exists $self->lexicon->{$_}) {
+                $flag++;
+            }
+            elsif (exists $self->lexicon->{"$_-"}) {
+                $flag++;
+                $_ = "$_-";
+            }
+            elsif (exists $self->lexicon->{"-$_"}) {
+                $flag++;
+                $_ = "-$_";
+            }
+
+            if ($flag) {
                 $sum++;
             }
             else {
@@ -104,36 +152,9 @@ sub trim_combinations {  # {{{
         }
         push @seen, $unknown if $unknown;
 
-        # Save this combination with the familiarity ratio for the
+        # Save this combination with the familiarity ratio as the
         # value.
         $self->knowns->{ join '.', @seen } = $sum / @seen if $sum;
-    }
-}  # }}}
-
-# Globals used by the successors method.
-my (@parsed, @new, $prev);
-sub successors {  # {{{
-    my ($self, $i) = @_;
-    $i = 0 unless defined $i;
-    $prev = 0 unless defined $prev;
-
-    for (@{ $self->parts->[$i] }) {
-        # Find the end-position of the stem.
-        my $n = $i + length;
-
-        # XXX Ugly mystery-hack:
-        # Yank-off the last two stems found, if we are at an "overlap point".
-        splice @new, -2 if $prev > $i;
-
-#print "$_ - i: $i, n: $n, prev: $prev, new: ". @new ."\n";
-
-        $prev = $i;
-
-        splice @new, @new, $n, $_;
-
-        push @{ $self->combinations }, join '.', @new if $n == length ($self->word);
-
-        $self->successors($n);
     }
 }  # }}}
 
@@ -186,6 +207,9 @@ represents a measure of familiarity.
 Currently, this familiarity mesasure is a simple ratio of known to 
 unknown parts.
 
+* Please check out the sample code in the eg/ directory for an 
+exciting example of how this module can be used.
+
 =head1 METHODS
 
 =head2 new()
@@ -204,25 +228,35 @@ below) if a word and lexicon are provided.
 
   $obj->build_parts();
 
-Construct an array of the word partitions.
+Construct an array of the word partitions, accessed via the parts() 
+method.
 
-=head2 successors()
+=head2 build_combinations()
 
-  $obj->successors();
+  $obj->build_combinations();
 
-Recursively compute the array of all possible word part combinations.
+Recursively compute the array of all possible word part combinations,
+accessed via the combinations() method.
 
-=head2 trim_combinations()
+=head2 build_knowns()
 
-  $obj->trim_combinations();
+  $obj->build_knowns();
 
-Compute the familiar word part combinations.
+Compute the familiar word part combinations, accessed via the knowns()
+method.
+
+This method handles word parts containing prefix and suffix hyphens,
+which are found in the web1913 dict server.  These hyphens actually 
+"encode" information about what is a syntactically legal word 
+combination.  Which can be used to score (or just throw out bogus 
+combinations).
 
 =head2 output_knowns()
 
   $obj->output_knowns();
 
-Convenience method to output the familiar word part combinations.
+Convenience method to output the familiar word part combinations with
+their familiarity scores rounded to two decimals.
 
 =head1 ACCESSORS
 
@@ -261,7 +295,7 @@ are computed by the build_parts() method.
 The array reference of all possible word part combinations.
 
 Note that this method is only useful for fetching, since the 
-combinations are computed by the successors() method.
+combinations are computed by the build_combinations() method.
 
 =head2 knowns()
 
@@ -272,17 +306,23 @@ familiarity scores (values).  Note that only the non-zero scored
 combinations are kept.
 
 Note that this method is only useful for fetching, since the knowns
-are computed by the trim_combinations() method.
+are computed by the build_knowns() method.
 
 =head1 DEPENDENCIES
 
 None
 
+=head1 DISCLAIMER
+
+This module uses some clunky, inefficient algorithms.  For instance,
+a 50 letter word (like a medical term) just might take until the end
+of time to parse.  Please write to me with improvements!
+
 =head1 TO DO
 
-Handle the successor method and globals correctly.
+Handle the successor method and related globals correctly.
 
-Return word part definitions.
+Make a knowns hash that maps to definitions.
 
 Synthesize a term list based on word part (thesaurus) definitions.
 (That is, go in reverse! Non-trivial!)

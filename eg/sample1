@@ -1,0 +1,49 @@
+#!/usr/bin/perl -w
+use strict;
+use Data::Dumper;
+use Lingua::TokenParse;
+
+my ($word, %lexicon);
+
+# Grab a word from the command line, or just use a sample.
+$word = shift @ARGV || 'partition';
+
+# Either manually define our lexicon.
+#@lexicon{@ARGV ? @ARGV : qw(part- -tion -on)} = ();
+# Or use a dict server.
+dict_fetch('web1913');
+
+# Dump stuff.
+#print "$word\n";
+#print Dumper \%lexicon;
+#print scalar keys %lexicon;
+
+# Make a token parse object.
+my $obj = Lingua::TokenParse->new(
+    word => $word,
+    lexicon => \%lexicon,
+);
+
+# Output the results.
+$obj->output_knowns;
+
+# Use a dict server (if you are on-line).
+sub dict_fetch {
+    my $server = shift || 'web1913';
+
+    # Make two calls for all prefixes and suffixes.
+    for (qw('^[a-z].*-\$' '^-[a-z].*\$')) {
+        # Call the dict server and get the lexicon fragments.
+        my @frags = qx/dict -d $server -match -strategy re $_/;
+        # The fragments probably have extra junk.
+        chomp @frags;
+        @frags = map {
+            s/web1913 : //;
+            lc;
+        } @frags;
+        # We might not really care about single letter fragments.
+        @frags = grep { length > 1 } @frags;
+        # Add them to our lexicon (without definitions).
+        @lexicon{@frags} = ();
+    }
+}

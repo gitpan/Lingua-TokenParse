@@ -3,4 +3,5 @@ Makefile.PL
 MANIFEST
 README
 TokenParse.pm
+eg/sample1
 t/1.t

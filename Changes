@@ -7,3 +7,8 @@ Revision history for Perl extension Lingua::TokenParse.
 0.02  Fri Apr  4
     - Fixed an undefined value used in the successor method.
     - Enhanced and fixed documentation.
+
+0.03  Sat Apr 5
+    - Handled prefix and suffix hyphens.
+    - Enhanced documentation.
+    - Made a handy eg/sample script that uses a dict server.
