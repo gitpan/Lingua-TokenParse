@@ -105,3 +105,6 @@ Revision history for Perl extension Lingua::TokenParse.
       fragment definitions used by the output_knowns method.
     - Added documentation sections accordingly.
     - Cleaned documentation a bit, of course.
+
+0.12.1  Mon Jun 16 2003
+    - Death to variables named $flag!!

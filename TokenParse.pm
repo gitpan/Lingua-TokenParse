@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.12';
+$VERSION = '0.12.1';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -188,10 +188,10 @@ sub build_knowns {  # {{{
 
         for (@chunks) {
             # Handle hyphens in lexicon entries.
-            ($_, my $flag) = _hyphenate($_, $self->lexicon, 0);
+            ($_, my $combo_seen) = _hyphenate($_, $self->lexicon, 0);
 
             # Sum the combination familiarity value.
-            if ($flag) {
+            if ($combo_seen) {
                 $frag_sum++;
                 $char_sum += length;
             }
@@ -260,7 +260,7 @@ sub trim_knowns {  # {{{
     for my $combo (sort keys %trimmed) {
         # Initialize the "bogus combination flag" for use with the
         # index() function.
-        my $flag = -1;
+        my $seen_position = -1;
 
         # Inspect each unknown chunk.
         for my $chunk (split /\./, $combo) {
@@ -274,57 +274,60 @@ sub trim_knowns {  # {{{
                 # Strip off the stem-hyphen, if it exists.
                 $entry =~ s/-//;
 
-                # Set the flag if we contain a known fragment.
-                $flag = index $chunk, $entry;
+                # Set the seen_position flag if we contain a known
+                # fragment.
+                $seen_position = index $chunk, $entry;
 
                 # Bail out, if we found a bogus combination.
-                last if $flag >= 0;
+                last if $seen_position >= 0;
             }
 
             # Bail out, if we found a bogus combination.
-            last if $flag >= 0;
+            last if $seen_position >= 0;
         }
 
         # Remove combinations that were flagged as being bogus.
-        delete $trimmed{$combo} if $flag >= 0;
+        delete $trimmed{$combo} if $seen_position >= 0;
     }
 
     # Execute user provided regular expressions.
     for my $combo (sort keys %trimmed) {
-        my $flag = 0;
+        my $matched = 0;
 
         # Flag matching rules as bogus.
         for my $rule (@{ $self->rules }) {
             if ($combo =~ /$rule/) {
-                $flag++;
+                $matched++;
                 last;
             }
         }
 
         # Remove this combination if it was flagged as being bogus.
-        delete $trimmed{$combo} if $flag;
+        delete $trimmed{$combo} if $matched;
     }
 
     # Set the knowns list to the new trimmed list.
     $self->knowns(\%trimmed);
 }  # }}}
 
+# Update the given string with it's actual lexicon value and increment
+# the seen flag.
 sub _hyphenate {  # {{{
-    my ($string, $lex, $flag) = @_;
+    my ($string, $lexicon, $combo_seen) = @_;
 
-    if (exists $lex->{$string}) {
-        $flag++ if defined $flag;
+    if (exists $lexicon->{$string}) {
+        $combo_seen++ if defined $combo_seen;
     }
-    elsif (exists $lex->{"-$string"}) {
-        $flag++ if defined $flag;
+    elsif (exists $lexicon->{"-$string"}) {
+        $combo_seen++ if defined $combo_seen;
         $string = "-$string";
     }
-    elsif (exists $lex->{"$string-"}) {
-        $flag++ if defined $flag;
+    elsif (exists $lexicon->{"$string-"}) {
+        $combo_seen++ if defined $combo_seen;
         $string = "$string-";
     }
 
-    return wantarray ? ($string, $flag) : $string;
+    return wantarray ? ($string, $combo_seen) : $string;
 }  # }}}
 
 sub output_knowns {  # {{{
