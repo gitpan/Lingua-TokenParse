@@ -57,3 +57,7 @@ Revision history for Perl extension Lingua::TokenParse.
 0.08.1  Mon Apr 14
     - Refactored eg/dict_fetch and made it vastly more simple.
     - Fixed documentation.
+
+0.08.2  Mon Apr 14
+    - Ack!  I left the lexicon and a debugging script in my eg/
+      directory.  : (
