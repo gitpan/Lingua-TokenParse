@@ -4,7 +4,6 @@ BEGIN {
     use strict;
     use warnings;
     use Test::More 'no_plan';
-use lib 'lib';
     use_ok 'Lingua::TokenParse';
 };
 

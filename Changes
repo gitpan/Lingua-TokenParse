@@ -141,3 +141,13 @@ Revision history for Perl extension Lingua::TokenParse.
 0.1501 Sat May 29 2004
     - Fixed POD Big Time.
     - Cleaned extraneous poo from the eg/ directory.
+
+0.16 Wed Aug 4 2004
+    - Added lexicon caching ala Storable.
+    - Added verbose statements all around.
+    - Removed the st00pid editor fold markers.
+    - Removed the overkill-sample code in the eg/ directory.
+    - Added a verbose() accessor.
+    - Cleaned up POD.
+    - Added constraint checking to the build_parts() method.
+    - Got rid of the unnecessary trim_knowns() method.

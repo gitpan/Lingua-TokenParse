@@ -1,13 +1,14 @@
-# $Id: TokenParse.pm,v 1.11 2004/05/29 23:08:36 gene Exp $
+# $Id: TokenParse.pm,v 1.19 2004/08/04 17:19:58 gene Exp $
 
 package Lingua::TokenParse;
-$VERSION = '0.1501';
+$VERSION = '0.16';
 use strict;
 use warnings;
 use Carp;
+use Storable;
 use Math::BaseCalc;
 
-sub new {  # {{{
+sub new {
     my $proto = shift;
     my $class = ref $proto || $proto;
     my $self  = {
@@ -18,6 +19,8 @@ sub new {  # {{{
         word_length  => 0,
         # Known tokens.
         lexicon      => {},
+        # Local lexicon cache file name.
+        lexicon_file => '',  # ?: 'lexicon-' . time(),
         # All word parts.
         parts        => [],
         # All possible parts combinations.
@@ -39,128 +42,177 @@ sub new {  # {{{
     bless $self, $class;
     $self->_init();
     return $self;
-}  # }}}
+}
 
-sub _init {  # {{{
+sub _init {
     my $self = shift;
     warn "Entering _init()\n" if $self->{verbose};
-    $self->parse( $self->{word} ) if $self->{word} && $self->{lexicon};
-}  # }}}
+    $self->word( $self->{word} ) if $self->{word};
+    # Retrieve our lexicon cache if a filename was set.
+    $self->lexicon_cache;
+}
 
-# Accessors {{{
-sub word {  # {{{
+sub DESTROY {
     my $self = shift;
-    warn "word()\n" if $self->{verbose};
+    # Cache our lexicon if a filename has been given.
+    $self->lexicon_cache( $self->{lexicon_file} )
+        if $self->{lexicon_file};
+}
+
+sub verbose {
+    my $self = shift;
+    $self->{verbose} = shift if @_;
+    return $self->{verbose};
+}
+
+sub word {
+    # WORD: This method is the only place where word_length is set.
+    my $self = shift;
+    warn "Entering word()\n" if $self->{verbose};
     if( @_ ) {
         $self->{word} = shift;
-        warn "New word=$self->{word}\n" if $self->{verbose};
         $self->{word_length} = length $self->{word};
-        warn "Length=$self->{word_length}\n" if $self->{verbose};
+        printf "\tword = %s\n\tlength = %d\n",
+            $self->{word}, $self->{word_length}
+            if $self->{verbose};
     }
     return $self->{word};
-}  # }}}
+}
 
-sub lexicon {  # {{{
+sub lexicon {
     my $self = shift;
-    $self->{lexicon} = shift if @_;
+    if( @_ ) {
+        $self->{lexicon} = @_ == 1 && ref $_[0] eq 'HASH'
+            ? shift
+            : @_ % 2 == 0
+                ? { @_ }
+                : {};
+    }
     return $self->{lexicon};
-}  # }}}
+}
 
-sub parts {  # {{{
+sub parts {
     my $self = shift;
     $self->{parts} = shift if @_;
     return $self->{parts};
-}  # }}}
+}
 
-sub combinations {  # {{{
+sub combinations {
     my $self = shift;
     $self->{combinations} = shift if @_;
     return $self->{combinations};
-}  # }}}
+}
 
-sub knowns {  # {{{
+sub knowns {
     my $self = shift;
     $self->{knowns} = shift if @_;
     return $self->{knowns};
-}  # }}}
+}
 
-sub definitions {  # {{{
+sub definitions {
     my $self = shift;
     $self->{definitions} = shift if @_;
     return $self->{definitions};
-}  # }}}
+}
 
-sub separator {  # {{{
+sub separator {
     my $self = shift;
     $self->{separator} = shift if @_;
     return $self->{separator};
-}  # }}}
+}
 
-sub not_defined {  # {{{
+sub not_defined {
     my $self = shift;
     $self->{not_defined} = shift if @_;
     return $self->{not_defined};
-}  # }}}
+}
 
-sub unknown {  # {{{
+sub unknown {
     my $self = shift;
     $self->{unknown} = shift if @_;
     return $self->{unknown};
-}  # }}}
+}
 
-sub constraints {  # {{{
+sub constraints {
     my $self = shift;
     $self->{constraints} = shift if @_;
     return $self->{constraints};
-}  # }}}
-# }}}
+}
 
-sub parse {  # {{{
+sub parse {
     my $self = shift;
-    warn "Enter parse()\n" if $self->{verbose};
+    warn "Entering parse()\n" if $self->{verbose};
     $self->word( shift ) if @_;
     croak 'No word provided.' unless defined $self->{word};
+    croak 'No lexicon defined.' unless keys %{ $self->{lexicon} };
     # Reset our data structures.
     $self->parts([]);
+    $self->definitions({});
     $self->combinations([]);
     $self->knowns({});
-    $self->definitions({});
     # Build new ones based on the word.
     $self->build_parts;
+    $self->build_definitions;
     $self->build_combinations;
     $self->build_knowns;
-    $self->build_definitions;
-    $self->trim_knowns;
-}  # }}}
+}
 
-sub build_parts {  # {{{
+sub build_parts {
     my $self = shift;
-    warn "Entering build_parts() word=$self->{word} length=$self->{word_length}\n"
-        if $self->{verbose};
+    warn "Entering build_parts()\n" if $self->{verbose};
+
     for my $i (0 .. $self->{word_length} - 1) {
         for my $j (1 .. $self->{word_length} - $i) {
-            push @{ $self->{parts}[$i] },
-                substr $self->{word}, $i, $j;
+            my $part = substr $self->{word}, $i, $j;
+            push @{ $self->{parts} }, $part
+                unless grep { $part =~ /$_/ }
+                    @{ $self->constraints };
         }
     }
-    if($self->{verbose}) {
-        warn 'Parts: ';
-        warn "\t@$_\n" for @{ $self->{parts} };
-    }
-}  # }}}
 
-sub build_combinations {  # {{{
+    if($self->{verbose}) {
+        # XXX This is ugly.
+        my $last = 0;
+        for my $part (@{ $self->{parts} }) {
+            print '',
+                ($last ? $last > length( $part ) ? "\n\t" : ', ' : "\t"),
+                $part;
+            $last = length $part;
+        }
+        print "\n" if @{ $self->{parts} };
+    }
+    return $self->{parts};
+}
+
+# Save a known combination entry => definition table.
+sub build_definitions {
     my $self = shift;
+    warn "Entering build_definitions()\n" if $self->{verbose};
+    for my $part (@{ $self->{parts} }) {
+        $self->{definitions}{$part} = $self->{lexicon}{$part}
+            if $self->{lexicon}{$part};
+    }
+    warn "\t", join( "\n\t", sort keys %{ $self->definitions } ), "\n"
+        if $self->{verbose};
+    return $self->{definitions};
+}
+
+sub build_combinations {
+    my $self = shift;
+    warn "Entering build_combinations()\n" if $self->{verbose};
 
     # field size for binary iteration (digits of precision)
     my $y  = $self->{word_length} - 1;
-    # total number of combinations
+    # total number of zero-based combinations
     my $z  = 2 ** $y - 1;
     # field size for the count
     my $lz = length $z;
     # field size for a combination
     my $m  = $self->{word_length} + $y;
-    warn "Combinations-1=$z, Field size=$m\n" if $self->{verbose};
+    warn sprintf
+        "\tTotal combinations: %d\n\tConstrained combinations:\n",
+        $z + 1
+        if $self->{verbose};
 
     # Truth is a single partition character: the lowly dot.
     my $c = Math::BaseCalc->new( digits => [ 0, '.' ] );
@@ -183,30 +235,31 @@ sub build_combinations {  # {{{
 
         unless( grep { $t =~ /$_/ } @{ $self->{constraints} } ) {
             # Preach it.
-            printf '%'.$lz.'d) %0'.$y.'s => %'.$m."s\n", $n, $i, $t
+            printf "\t%".$lz.'d) %0'.$y.'s => %'.$m."s\n", $n, $i, $t
                 if $self->{verbose};
             push @{ $self->combinations }, $t;
         }
     }
-}  # }}}
 
-sub build_knowns {  # {{{
+    return $self->{combinations};
+}
+
+sub build_knowns {
     my $self = shift;
+    return unless scalar keys %{ $self->{lexicon} };
+    warn "Entering build_knowns()\n" if $self->{verbose};
 
-    # Show familiar combinations for each "raw" combination.
+    # Save the familiarity value for each "raw" combination.
     for my $combo (@{ $self->{combinations} }) {
         # Skip combinations that have already been seen.
         next if exists $self->{knowns}{$combo};
 
-        my $sum = 0;
-        my ($frag_sum, $char_sum) = (0, 0);
+        my ($sum, $frag_sum, $char_sum) = (0, 0, 0);
 
         # Get the bits of the combination.
         my @chunks = split /\./, $combo;
-
         for (@chunks) {
-            # XXX What does this do again?
-            # Handle hyphens in lexicon entries.
+            # XXX Uh.. Magically handle hyphens in lexicon entries.
             ($_, my $combo_seen) = _hyphenate($_, $self->lexicon, 0);
 
             # Sum the combination familiarity values.
@@ -215,114 +268,37 @@ sub build_knowns {  # {{{
                 $char_sum += length;
             }
         }
-
+# XXX Huh? Why?  Can $_ change or something?
         # Stick our combination back together.
         $combo = join '.', @chunks;
 
         # Save this combination and its familiarity ratios.
-        $self->{knowns}{$combo} = [
-            $frag_sum / @chunks,
-            $char_sum / $self->{word_length}
-        ];
-    }
-}  # }}}
-
-sub build_definitions {  # {{{
-    my $self = shift;
-    # Save combination entries with their definitions as the values.
-    for my $combo (keys %{ $self->{knowns} }) {
-        for my $part (split /\./, $combo) {
-            $self->{definitions}{$part} = $self->{lexicon}{$part}
-                if $self->{lexicon}{$part};
+        my $x = $frag_sum / @chunks;
+        my $y = $char_sum / $self->{word_length};
+        warn "\t$combo: [$x, $y]\n" if $self->{verbose};
+        if( $x || $y ) {
+            $self->{knowns}{$combo} = [ $x, $y ];
+        }
+        else {
+            delete $self->{knowns}{$combo};
         }
     }
-}  # }}}
 
-sub trim_knowns {  # {{{
-    my $self = shift;
+    return $self->{knowns};
+}
 
-    my %trimmed;
+# Reduce the number of known combinations by concatinating adjacent
+# unknowns (and then removing any duplicates produced).
 
-    # Make a familiar combination from each "raw" combination.
-    for my $combo (keys %{ $self->{knowns} }) {
-        # Skip combinations that have already been seen.
-        next if exists $trimmed{$combo};
-
-        # Get the bits of the combination.
-        my @chunks = split /\./, $combo;
-        my @seen = ();
-        my $unknown = '';
-
-        # Concatinate adjacent unknowns.
-        for (@chunks) {
-            if (defined $self->{definitions}{$_}) {
-                push @seen, scalar _hyphenate($unknown, $self->{lexicon})
-                    if $unknown;
-                push @seen, $_;
-                $unknown = '';
-            }
-            else {
-                $unknown = $unknown . $_;
-            }
-        }
-        push @seen, scalar _hyphenate($unknown, $self->{lexicon})
-            if $unknown;
-
-        # Add the combo to the trimmed combinations list and assign
-        # the score from the "all possible combinations" list.
-        $combo = join '.', @seen;
-        $trimmed{$combo} = $self->{knowns}{$combo}
-            if exists $self->{knowns}{$combo};
-    }
-
-    # Delete trimmed combinations that have defined lexicon entries
-    # embedded in the unknowns.
-    for my $combo (sort keys %trimmed) {
-        # Initialize the "bogus combination flag" for use with the
-        # index() function.
-        my $seen_position = -1;
-
-        # Inspect each unknown chunk.
-        for my $chunk (split /\./, $combo) {
-            next if defined $self->{definitions}{$chunk};
-
-            # Do we contain a defined lexicon entry?
-            for my $entry (
-                grep { defined $self->{definitions}{$_} }
-                    sort keys %{ $self->{definitions} }
-            ) {
-                # Strip off the stem-hyphen, if it exists.
-                $entry =~ s/-//;
-
-                # Set the seen_position flag if we contain a known
-                # fragment.
-                $seen_position = index $chunk, $entry;
-
-                # Bail out, if we found a bogus combination.
-                last if $seen_position >= 0;
-            }
-
-            # Bail out, if we found a bogus combination.
-            last if $seen_position >= 0;
-        }
-
-        # Remove combinations that were flagged as being bogus.
-        delete $trimmed{$combo} if $seen_position >= 0;
-    }
-
-    # Set the knowns list to the new trimmed list.
-    $self->knowns(\%trimmed);
-}  # }}}
-
-sub learn {  # {{{
+sub learn {
     my ($self, %args) = @_;
     # Get the list of (partially) unknown stem combinations.
     # Loop through each looking in %args or prompting for a definition.
-}  # }}}
+}
 
 # Update the given string with its actual lexicon value and increment
 # the seen flag.
-sub _hyphenate {  # {{{
+sub _hyphenate {
     my ($string, $lexicon, $combo_seen) = @_;
 
     if (exists $lexicon->{$string}) {
@@ -338,9 +314,9 @@ sub _hyphenate {  # {{{
     }
 
     return wantarray ? ($string, $combo_seen) : $string;
-}  # }}}
+}
 
-sub output_knowns {  # {{{
+sub output_knowns {
     my $self = shift;
     my @out = ();
     my $header = <<HEADER;
@@ -373,9 +349,42 @@ HEADER
     }
 
     return wantarray ? @out : $header . join "\n\n", @out;
-}  # }}}
+}
+
+# Naive, no locking read/write.  If you run a production environment,
+# you know what to do.
+sub lexicon_cache {
+    my( $self, $file, $value ) = @_;
+    warn "Entering lexicon_cache()\n" if $self->{verbose};
+
+    # Set the file and the lexicon_file attribute if we are told to.
+    if( $file && $file eq 'lexicon_file' && $value ) {
+        $self->{lexicon_file} = $value;
+        $file = $value;
+    }
+
+    # If there is no file try to use the lexicon_file.
+    $file ||= $self->{lexicon_file};
+    # Otherwise, bail out!
+    warn( "No lexicon cache file set\n" ) and return
+        if $self->{verbose} && !$file;
+
+    if( $file ) {
+        # Store 'em if you got 'em.
+        if( keys %{ $self->{lexicon} } ) {
+            warn "store( $self->{lexicon}, $file )\n" if $self->{verbose};
+            store( $self->{lexicon}, $file );
+        }
+        # ..Retrieve 'em if not.
+        else {
+            warn "retrieve( $file )\n" if $self->{verbose} && -e $file;
+            $self->lexicon( retrieve( $file ) ) if -e $file;
+        }
+    }
+}
 
 1;
+
 __END__
 
 =head1 NAME
@@ -385,129 +394,121 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
 =head1 SYNOPSIS
 
   use Lingua::TokenParse;
-
-  my $obj = Lingua::TokenParse->new(
-      word => 'antidisthoughtlessfulneodeoxyribonucleicfoo'
+  my $p = Lingua::TokenParse->new(
+    word => 'antidisthoughtlessfulneodeoxyribonucleicfoo',
+    lexicon => {
+        a    => 'not',
+        anti => 'opposite',
+        di   => 'two',
+        dis  => 'separation',
+        eo   => 'hmmmmm',  # etc.
+    },
+    constraints => [ qr/eo(?:\.|$)/ ], # no parts ending in eo allowed
   );
-  $obj->lexicon({
-      'a'    => 'not',
-      'anti' => 'opposite',
-      'di'   => 'two',
-      'dis'  => 'away',
-      'eo'   => 'hmmmmm',
-      'ful'  => 'with',
-      'les'  => 'without',
-      # etc...
-  });
-  $obj->constraints([ qr/eo./ ]);
-  $obj->parse;
-  print Dumper($obj->knowns);
+  print Data::Dumper($p->knowns);
 
 =head1 DESCRIPTION
 
-This class represents a Lingua::TokenParse object and contains 
+This class represents a Lingua::TokenParse object and contains
 methods to parse a given word into familiar combinations based
-on a lexicon of known word parts.
+on a lexicon of known word parts.  This lexicon is a simple
+I<fragment =E<gt> definition> list.
 
-Words like "partition" and "automobile" are composed of different
-word parts.  Given a lexicon of known fragments, one can partition
-a word into a list of its (possibly overlapping) fragment
-combinations.
+Words like "automobile" and "deoyribonucleic" are composed of
+different roots, prefixes, suffixes, etc.  With a lexicon of known
+fragments, a word can be partitioned into a list of its (possibly
+overlapping) known and unknown fragment combinations.
 
-Each of these combinations can be given a score, which represents a 
-measure of word familiarity.  This measure is a set of ratios of
-known to unknown parts.
-
-The lexicon is a simple I<fragment => definition> list and must have
-a definition for each entry.  This definition can be an empty string
-(i.e. ''), but if it is undefined the fragment is considered an
-unknown.
-
-Please see the sample code in the distribution C<eg/> directory for 
-examples of how this module can be used.
+These combinations can be given a score, which represents a measure of
+word familiarity.  This measure is a set of ratios of known to unknown
+fragments and letters.
 
 =head1 METHODS
 
 =head2 new
 
-  $obj = Lingua::TokenParse->new(
+  $p = Lingua::TokenParse->new(
+      verbose => 0,
       word => $word,
       lexicon => \%lexicon,
+      lexicon_file => $lexicon_file,
+      constraints => \@constraints,
   );
 
 Return a new Lingua::TokenParse object.
 
-This method will automatically call the partition methods (detailed 
+This method will automatically call the partition methods (detailed
 below) if a word and lexicon are provided.
 
-The C<word> can be any string, however, you will want to make sure that 
+The C<word> can be any string, however, you will want to make sure that
 it does not include the same characters you use for the C<separator>,
 C<not_defined> and C<unknown> strings (described below).
 
 The C<lexicon> must be a hash reference with word fragments as keys and
-definitions their respective values.  Definitions must be defined in 
-order for the trim_knowns method work properly.
+definitions as their respective values.
 
 =head2 parse
 
-  $obj->parse;
-  $obj->parse($word);
+  $p->parse;
+  $p->parse($string);
 
-This method resets the partition lists and then calls all the 
-individual parsing methods that are detailed below.
-
-If a string is provided the word to parse is first set to that.
+This method clears the partition lists and then calls all the
+individual parsing methods that are detailed below.  If a string
+is provided the object's C<word> attribute is reset to that, first.
 
 =head2 build_parts
 
-  $obj->build_parts;
+  $parts = $p->build_parts;
 
-Construct an array of the word partitions, accessed via the parts
-method.
-
-=head2 build_combinations
-
-  $obj->build_combinations;
-
-Compute the array of all possible word part combinations, excluding
-constraints and accessed via the combinations method.
-
-=head2 build_knowns
-
-  $obj->build_knowns;
-
-Compute the familiar word part combinations, accessed via the knowns
-method.
-
-This method handles word parts containing prefix and suffix hyphens,
-which encode information about what is a syntactically illegal word 
-combination, which can be used to score (or even throw out bogus
-combinations).
+Construct an array of the word partitions.
 
 =head2 build_definitions
 
-  $obj->build_definitions;
+  $known_definitions = $p->build_definitions;
 
-Construct a hash of the definitions of the word parts in each 
-combination in the keys of the knowns hash.  This hash is accessed
-via the definitions method.
+Construct a table of the definitions of the word parts.
 
-=head2 trim_knowns
+=head2 build_combinations
 
-  $obj->trim_knowns;
+  $combos = $p->build_combinations;
 
-Trim the hash of known combinations by concatinating adjacent unknown
-fragments and throwing out combinations with a score of zero.
+Compute the array of all possible word part combinations.
+
+=head2 build_knowns
+
+  $raw_knowns = $p->build_knowns;
+
+Compute the familiar word part combinations.
+
+This method handles word parts containing prefix and suffix hyphens,
+which encode information about what is a syntactically illegal word
+combination, which can be used to score (or even throw out bogus
+combinations).
+
+=head2 lexicon_cache
+
+  $p->lexicon_cache;
+  $p->lexicon_cache( $lexicon_file );
+  $p->lexicon_cache( lexicon_file => $lexicon_file );
+
+Backup and retrieve the hash reference of token entries.
+
+If this method is called with no arguments, the object's
+C<lexicon_file> is used.  If the method is called with a single
+argument, the object's C<lexicon_file> attribute is temporarily
+overridden.  If the method is called with two arguments and the first
+is the string "lexicon_file" then that attribute is set before
+proceeding.
 
 =head1 CONVENIENCE METHOD
 
 =head2 output_knowns
 
-  @ = $obj->output_knowns;
-  print Dumper \@knowns;
+  @known_list = $p->output_knowns;
+  print Dumper \@known_list;
 
   # Look at the "even friendlier output."
-  print scalar $obj->output_knowns(
+  print scalar $p->output_knowns(
       separator   => $separator,
       not_defined => $not_defined,
       unknown     => $unknown,
@@ -539,61 +540,73 @@ Indicates an unknown fragment.  The default is the question mark: '?'.
 
 =head2 word
 
-  $word = $obj->word;
-  $obj->word($word);
+  $p->word($word);
+  $word = $p->word;
 
 The actual word to partition which can be any string.
 
 =head2 lexicon
 
-  $lexicon = $obj->lexicon;
-  $obj->lexicon(\%lexicon);
+  $p->lexicon(%lexicon);
+  $p->lexicon(\%lexicon);
+  $lexicon = $p->lexicon;
 
 The lexicon is a hash reference with word fragments as keys and
-definitions their respective values.
+definitions their respective values.  It can be set with either a
+hash or a hash reference.
+
+If an argument is supplied but is neither a hash or hashref, the
+lexicon is cleared (reset to {} an empty hashref).
 
 =head2 parts
 
-  $parts = $obj->parts;
+  $parts = $p->parts;
 
-The array reference of all possible word partitions.
+The computed array reference of all possible word partitions.
 
 =head2 combinations
 
-  $combinations = $obj->combinations;
+  $combinations = $p->combinations;
 
-The array reference of all possible word part combinations.
+The computed array reference of all possible word part combinations.
 
 =head2 knowns
 
-  $knowns = $obj->knowns;
+  $knowns = $p->knowns;
 
-The hash reference of known (non-zero scored) combinations with their
-familiarity values.
+The computed hash reference of known (non-zero scored) combinations
+with their familiarity values.
 
 =head2 definitions
 
-  $definitions = $obj->definitions;
+  $definitions = $p->definitions;
 
-The hash reference of the definitions provided for each fragment of 
+The hash reference of the definitions provided for each fragment of
 the combinations with the values of unknown fragments set to undef.
 
 =head2 constraints
 
-  $constraints = $obj->constraints;
-  $obj->constraints(\@regexps);
+  $constraints = $p->constraints;
+  $p->constraints(\@regexps);
 
 An optional, user defined array reference of regular expressions to
 apply to the list of known combinations.  This is acts as a negative
-pruning device.  Taht is, if a match is successful, the entry is
+pruning device, meaning that if a match is successful, the entry is
 excluded from the list.
+
+=head1 EXAMPLES
+
+Example code can be found in the distribution C<eg/> directory.
 
 =head1 TO DO
 
+Turn the lame C<output_knowns> method into a sensible XML serializer
+(of optionally everything).
+
 Compute the time required for a given parse.
 
-Make a method to request definitions for unknown fragments and call
-it... C<learn()>.
+Make a method to add definitions for unknown fragments and call it...
+C<learn()>.
 
 Use traditional stemming to trim down the common knowns and see if
 the score is the same...
@@ -602,6 +615,8 @@ Synthesize a term list based on a thesaurus of word-part definitions.
 That is, go in reverse.  Non-trivial!
 
 =head1 SEE ALSO
+
+L<Storable>
 
 L<Math::BaseCalc>
 
@@ -613,7 +628,7 @@ For my Grandmother and English teacher Frances Jones.
 
 Thank you to Luc St-Louis for helping me increase the speed while
 eliminating the exponential memory footprint.  I wish I knew your
-email address so I could tell you.  :-) B<lucs++>
+email address so I could tell you.  B<lucs++>
 
 =head1 AUTHOR
 
@@ -624,6 +639,6 @@ Gene Boggs E<lt>gene@cpan.orgE<gt>
 Copyright (C) 2003-2004 by Gene Boggs
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself. 
+it under the same terms as Perl itself.
 
 =cut
