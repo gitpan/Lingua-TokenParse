@@ -39,3 +39,6 @@ Revision history for Perl extension Lingua::TokenParse.
 0.07  Thu Apr 10
     - Moved the publically unnecessary reset_parse() method to parse().
     - Updated the documentation and eg/sample0, accordingly.
+
+0.07.1  Thu Apr 10
+    - Cleaned up code!

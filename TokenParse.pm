@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.07';
+$VERSION = '0.07.1';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -149,18 +149,7 @@ sub build_knowns {  # {{{
 
         for (@chunks) {
             # Handle hyphens in lexicon entries.
-            my $flag = 0;
-            if (exists $self->lexicon->{$_}) {
-                $flag++;
-            }
-            elsif (exists $self->lexicon->{"$_-"}) {
-                $flag++;
-                $_ = "$_-";
-            }
-            elsif (exists $self->lexicon->{"-$_"}) {
-                $flag++;
-                $_ = "-$_";
-            }
+            ($_, my $flag) = _hyphenate($_, $self->lexicon, 0);
 
             # Sum the combination familiarity value.
             $sum++ if $flag;
@@ -177,27 +166,12 @@ sub build_knowns {  # {{{
 
 sub build_definitions {  # {{{
     my $self = shift;
-
-    # Make a familiar combination from each "raw" combination.
+    # Save combination entries with their definitions as the values.
     for my $combo (keys %{ $self->knowns }) {
-        # Get the bits of the combination.
-        my @chunks = split /\./, $combo;
-
-        # Save entries with their definitions as the values.
-        for (@chunks) {
-            # Handle hyphens in lexicon entries.
-            if (exists $self->lexicon->{$_}) {
-                $self->definitions->{$_} = $self->lexicon->{$_};
-            }
-            elsif (exists $self->lexicon->{"$_-"}) {
-                $self->definitions->{$_} = $self->lexicon->{"$_-"};
-            }
-            elsif (exists $self->lexicon->{"-$_"}) {
-                $self->definitions->{$_} = $self->lexicon->{"-$_"};
-            }
-            else {
-                $self->definitions->{$_} = undef;
-            }
+        for (split /\./, $combo) {
+            $self->definitions->{$_} =
+                exists $self->lexicon->{$_}
+                    ? $self->lexicon->{$_} : undef
         }
     }
 }  # }}}
@@ -217,15 +191,8 @@ sub trim_knowns {  # {{{
         # Concatinate adjacent unknowns.
         for (@chunks) {
             if (defined $self->definitions->{$_}) {
-                if ($unknown) {
-                    if (exists $self->lexicon->{"-$unknown"}) {
-                        $unknown = "-$unknown";
-                    }
-                    elsif (exists $self->lexicon->{"$unknown-"}) {
-                        $unknown = "$unknown-";
-                    }
-                    push @seen, $unknown;
-                }
+                push @seen, scalar _hyphenate($unknown, $self->lexicon)
+                    if $unknown;
                 push @seen, $_;
                 $unknown = '';
             }
@@ -233,46 +200,69 @@ sub trim_knowns {  # {{{
                 $unknown = $unknown . $_;
             }
         }
-        if ($unknown) {
-            if (exists $self->lexicon->{"-$unknown"}) {
-                $unknown = "-$unknown";
-            }
-            elsif (exists $self->lexicon->{"$unknown-"}) {
-                $unknown = "$unknown-";
-            }
-            push @seen, $unknown;
-        }
+        push @seen, scalar _hyphenate($unknown, $self->lexicon)
+            if $unknown;
 
         $combo = join '.', @seen;
         $trimmed{$combo} = $self->knowns->{$combo};
     }
 
     # Delete trimmed combinations that have defined lexicon entries
-    # in the unknowns.
+    # embedded in the unknowns.
     for my $combo (sort keys %trimmed) {
+        # Initialize the "bogus combination flag" for use with the
+        # index() function.
         my $flag = -1;
 
         # Inspect each combination chunk.
         for my $chunk (split /\./, $combo) {
             next if $self->definitions->{$chunk};
 
+            # Loops through the defined fragments.
             # Does the unknown chunk contain a defined lexicon entry?
             for my $entry (
                 grep { defined $self->definitions->{$_} }
                     sort keys %{ $self->definitions }
             ) {
+                # Strip off the stem-hyphen, if it exists.
                 $entry =~ s/-//;
+
+                # Flag the combination as bogus, if it has an
+                # unknown bit that contains a known fragment.
                 $flag = index $chunk, $entry;
+
+                # Bail out, if we found a bogus combination.
                 last if $flag >= 0;
             }
 
+            # Bail out, if we found a bogus combination.
             last if $flag >= 0;
         }
 
+        # Remove combinations that were flagged as being bogus.
         delete $trimmed{$combo} if $flag >= 0;
     }
 
+    # Set the knowns list to the new trimmed list.
     $self->knowns(\%trimmed);
+}  # }}}
+
+sub _hyphenate {  # {{{
+    my ($string, $lex, $flag) = @_;
+
+    if (exists $lex->{$string}) {
+        $flag++ if defined $flag;
+    }
+    elsif (exists $lex->{"-$string"}) {
+        $flag++ if defined $flag;
+        $string = "-$string";
+    }
+    elsif (exists $lex->{"$string-"}) {
+        $flag++ if defined $flag;
+        $string = "$string-";
+    }
+
+    return wantarray ? ($string, $flag) : $string;
 }  # }}}
 
 sub output_knowns {  # {{{
@@ -503,8 +493,6 @@ improvements!
 
 Calculate familiarity with more granularity.  Possibly with a
 multidimensional measure.
-
-Output some type of concatinated, known combination definition.
 
 Handle the build_combinations method and related globals correctly.
 
