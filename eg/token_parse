@@ -9,17 +9,17 @@ use Lingua::TokenParse;
 my $max = 12;
 
 print header, start_html('Word Parser'), start_form,
-    p('This program will try to score a word, based on familiarity with prefixes and suffixes from ',
-        a({ -href => 'http://humanities.uchicago.edu/forms_unrest/webster.form.html' },
-            "the Webster's Revised Unabridged Dictionary.")
-    ),
+    'This program will try to score a word, based on familiarity with prefixes and suffixes from ',
+    a({ -href => 'http://humanities.uchicago.edu/forms_unrest/webster.form.html' },
+        b("The Webster's Revised Unabridged Dictionary.")),
+    p,
     'Word: ', textfield('word', '', $max, $max),
     submit('submit', 'submit'),
-    ' ex: biology',
+    ' ex: paleolithic',
+    p,
+    "$max letters or less, please. (The smaller the word, the faster the parsing, of course.)",
     br,
-    "* $max letters or less, please. (The smaller the word, the faster the parsing, of course.)",
-    br,
-    '* Also note that single letter fragments are ignored at this time.',
+    'Also note that single letter fragments are ignored at this time.',
     hr;
 
 my ($word, $obj);
@@ -58,12 +58,12 @@ if ($word and $obj) {
 }
 
 print hr,
-    a({ -href => 'http://search.cpan.org/author/GENE/Lingua-TokenParse-0.05/' },
-        'The Lingua::TokenParse module'),
+    a({ -href => 'http://search.cpan.org/author/GENE/Lingua-TokenParse-0.07.1/' },
+        b('The Lingua::TokenParse module')),
     br,
     a({ -href => 'http://ology.net/dev/lex/code/token_parse' },
-        'The code to this CGI'),
+        b('The code to this CGI')),
     br,
     'Both, written by ',
-    a({ -href => 'mailto:gene at ology dot net' }, 'Gene Boggs'),
+    a({ -href => 'mailto:gene at ology dot net' }, b('Gene Boggs')),
     end_form, end_html;

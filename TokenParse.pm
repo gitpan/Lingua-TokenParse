@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.07.1';
+$VERSION = '0.08';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -114,15 +114,16 @@ sub build_parts {  # {{{
 
 sub build_combinations {  # {{{
     my ($self, $i) = @_;
-    $i = 0 unless defined $i;
+    $i    = 0 unless defined $i;
     $prev = 0 unless defined $prev;
 
     for (@{ $self->parts->[$i] }) {
         # Find the end-position of the stem.
         my $n = $i + length;
 
-        # XXX Ugly mystery-hack:
-        # Yank-off the last two stems found, if we are at an "overlap point".
+        # XXX This is an ugly mystery-hack:
+        # Yank-off the last two stems found, if we are at an
+        # "overlap point".
         splice @new, -2 if $prev > $i;
 
 #print "$_ - i: $i, n: $n, prev: $prev, new: ". @new ."\n";
@@ -131,7 +132,8 @@ sub build_combinations {  # {{{
 
         splice @new, @new, $n, $_;
 
-        push @{ $self->combinations }, join '.', @new if $n == length ($self->word);
+        push @{ $self->combinations }, join '.', @new
+            if $n == length ($self->word);
 
         $self->build_combinations($n);
     }
@@ -267,6 +269,7 @@ sub _hyphenate {  # {{{
 
 sub output_knowns {  # {{{
     my $self = shift;
+    my @out = ();
 
     for (reverse
              sort { $self->knowns->{$a} <=> $self->knowns->{$b} }
@@ -279,8 +282,12 @@ sub output_knowns {  # {{{
                     ? $self->definitions->{$chunk}
                     : '?';
         }
-        printf qq/%s: %0.2f\n"%s"\n\n/, $_, $self->knowns->{$_}, join '; ', @definition;
+
+        push @out, sprintf qq/%s: %0.2f\n"%s"/,
+            $_, $self->knowns->{$_}, join '; ', @definition;
     }
+
+    return wantarray ? @out : join "\n\n", @out;
 }  # }}}
 
 1;
@@ -298,10 +305,10 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
   my %lexicon;
   @lexicon{qw(ti art ion)} = qw(foo bar baz);
   my $obj = Lingua::TokenParse->new(
-      word => $word,
+      word    => $word,
       lexicon => \%lexicon,
   );
-  $obj->output_knowns;
+  print scalar $obj->output_knowns;
 
   # Okay.  Now, let's parse a new word.
   $obj->word('metaphysical');
@@ -313,7 +320,7 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
       '-al'   => 'relating to, characterized by',
   });
   $obj->parse;
-  $obj->output_knowns;
+  my @knowns = $obj->output_knowns;
 
 =head1 ABSTRACT
 
@@ -352,15 +359,6 @@ Return a new Lingua::TokenParse object.
 
 This method will automatically call the partition methods (detailed 
 below) if a word and lexicon are provided.
-
-=head2 _reset_parse()
-
-  $obj->_reset_parse();
-
-Reset the lists used to parse a word into fragment combinations.
-
-This method is automatically called prior to reparsing a new word in 
-the same session and should never need to be called explicitly.
 
 =head2 parse()
 
@@ -415,10 +413,15 @@ unknown fragments concatinated.
 
 =head2 output_knowns()
 
-  $obj->output_knowns();
+  print $obj->output_knowns();
 
-Convenience method to output the familiar word part combinations with
-their familiarity scores rounded to two decimals.
+Convenience method to return the familiar word part combinations with
+their familiarity scores (rounded to two decimals) and semicolon 
+separated, fragment definitions in either scalar or array context.
+
+In scalar context, a single, newline separated string is returned.
+In array context, each of these combinations is a separate entry in 
+an array.
 
 =head1 ACCESSORS
 

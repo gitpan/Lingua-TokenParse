@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-use strict;
 #
 # This is the module's SYNOPSIS section.
 #
@@ -9,10 +8,10 @@ use strict;
   my %lexicon;
   @lexicon{qw(ti art ion)} = qw(foo bar baz);
   my $obj = Lingua::TokenParse->new(
-      word => $word,
+      word    => $word,
       lexicon => \%lexicon,
   );
-  $obj->output_knowns;
+  print scalar $obj->output_knowns;
 
   # Okay.  Now, let's parse a new word.
   $obj->word('metaphysical');
@@ -24,4 +23,4 @@ use strict;
       '-al'   => 'relating to, characterized by',
   });
   $obj->parse;
-  $obj->output_knowns;
+  my @knowns = $obj->output_knowns;

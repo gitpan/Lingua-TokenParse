@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 5;
+use Test::More tests => 7;
 
 BEGIN { use_ok('Lingua::TokenParse') };
 
@@ -370,9 +370,26 @@ my $definitions = {  # {{{
     'artiti' => undef
 };  # }}}
 
+my $array_out = [  # {{{
+    'part.i.tion: 1.00
+"a; b; c"',
+    'part.i.t.i.on: 0.80
+"a; b; ?; b; d"'
+];  # }}}
+
+my $scalar_out =  # {{{
+'part.i.tion: 1.00
+"a; b; c"
+
+part.i.t.i.on: 0.80
+"a; b; ?; b; d"';
+# }}}
+
 my %lexicon;
 @lexicon{qw(part i tion on)} = qw(a b c d);
 
+# new() automatically calls all the parsing methods.
+#
 my $obj = Lingua::TokenParse->new(
     word => 'partition',
     lexicon => \%lexicon,
@@ -382,3 +399,7 @@ is_deeply $obj->parts, $parts, 'word partitions';
 is_deeply $obj->combinations, $combinations, 'all combinations';
 is_deeply $obj->knowns, $knowns, 'known combinations';
 is_deeply $obj->definitions, $definitions, 'fragment definitions';
+is_deeply [ $obj->output_knowns ], $array_out,
+    'scored and defined combinations in array context';
+is scalar $obj->output_knowns, $scalar_out,
+    'scored and defined combinations in scalar context';

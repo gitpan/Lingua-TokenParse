@@ -3,6 +3,7 @@ MANIFEST
 Makefile.PL
 README
 TokenParse.pm
+eg/README
 eg/dict_fetch
 eg/sample0
 eg/sample1

@@ -1,0 +1,7 @@
+README - This file.
+dict_fetch - Convenience program to grab entries from dict.org.
+sample0 - The module's SYNOPSIS section.
+sample1 - A simple example program.
+sample2 - An example program that calls dict_fetch.
+token_parse - A sample CGI (provided because, let's face it, most
+    word people are not computer programmers).

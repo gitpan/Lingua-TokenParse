@@ -42,3 +42,14 @@ Revision history for Perl extension Lingua::TokenParse.
 
 0.07.1  Thu Apr 10
     - Cleaned up code!
+
+0.08  Sun Apr 13
+    - Removed documentation of the (probably) unnecessary
+      _reset_parse() method.
+    - Cleaned up code a bit, again.
+    - Made the output_knowns() method return a string, instead of
+      printing it.  Oops.
+    - Updated documentation, of course.
+    - Added the output_knowns() method to the test suite.
+    - Updated eg/sample0 (accordance with the module's SYNOPSIS).
+    - Added an eg/README file to describe the sample programs.
