@@ -31,3 +31,7 @@ Revision history for Perl extension Lingua::TokenParse.
     - Updated documentation.
     - Updated eg/ samples.
     - Repaired the broken test suite.
+
+0.06  Thu Apr 10
+    - Made the output_knowns() method show the fragment definitions.
+    - Added the token_parse CGI to the eg/ directory.

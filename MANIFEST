@@ -7,4 +7,5 @@ eg/dict_fetch
 eg/sample0
 eg/sample1
 eg/sample2
+eg/token_parse
 t/1.t

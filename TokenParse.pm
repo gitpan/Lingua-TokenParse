@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.05';
+$VERSION = '0.06';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -278,10 +278,17 @@ sub output_knowns {  # {{{
     my $self = shift;
 
     for (reverse
-         sort { $self->knowns->{$a} <=> $self->knowns->{$b} }
-         keys %{ $self->knowns }
+             sort { $self->knowns->{$a} <=> $self->knowns->{$b} }
+                 keys %{ $self->knowns }
     ) {
-        printf "%s: %0.2f\n", $_, $self->knowns->{$_};
+        my @definition;
+        for my $chunk (split /\./) {
+            push @definition,
+                $self->definitions->{$chunk}
+                    ? $self->definitions->{$chunk}
+                    : '?';
+        }
+        printf qq/%s: %0.2f\n"%s"\n\n/, $_, $self->knowns->{$_}, join '; ', @definition;
     }
 }  # }}}
 

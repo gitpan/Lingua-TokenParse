@@ -1,4 +1,4 @@
-Lingua/TokenParse version 0.05
+Lingua/TokenParse version 0.06
 ==============================
 
 INSTALLATION
@@ -13,6 +13,10 @@ To install this module type the following:
 DEPENDENCIES
 
 None
+
+HISTORY
+
+See the Changes file in this distribution.
 
 COPYRIGHT AND LICENCE
 
