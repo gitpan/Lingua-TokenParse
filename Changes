@@ -128,3 +128,12 @@ Revision history for Perl extension Lingua::TokenParse.
     - Ack!  I forgot to update the Makefile.PL and require the
       Math::BaseCalc module.
     - Removed old_build_combinations().
+
+0.15 Sun May 16 2004
+    - Cleaned out pre-0.14 forgotten poo.
+    - Simplified construction and initialization.
+    - Changed "rules" to "constraints".
+    - Moved constraint exclusion to build_combinations().
+    - Excluded definitions of 'undef'.
+    - Trimmed and updated documentation.
+    - Trimmed and enhanced test script.

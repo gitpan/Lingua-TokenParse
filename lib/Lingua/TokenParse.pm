@@ -1,7 +1,7 @@
-# $Id: TokenParse.pm,v 1.6 2004/05/16 02:58:02 gene Exp $
+# $Id: TokenParse.pm,v 1.10 2004/05/17 04:58:30 gene Exp $
 
 package Lingua::TokenParse;
-$VERSION = '0.1401';
+$VERSION = '0.15';
 use strict;
 use warnings;
 use Carp;
@@ -14,15 +14,16 @@ use Math::BaseCalc;
 # Things are sorted in loops for debugging purposes only.
 
 sub new {  # {{{
-    my ($class, %args) = @_;
-
-    my $self = {
+    my $proto = shift;
+    my $class = ref $proto || $proto;
+    my $self  = {
+        verbose      => 0,
         # The word to parse!
-        word         => $args{word} || undef,
-        # We need to use the length of our word in a few methods.
-        _word_length => exists $args{word} ? length ($args{word}) : 0,
+        word         => undef,
+        # We need to use this.
+        word_length  => 0,
         # Known tokens.
-        lexicon      => $args{lexicon} || {},
+        lexicon      => {},
         # All word parts.
         parts        => [],
         # All possible parts combinations.
@@ -32,32 +33,35 @@ sub new {  # {{{
         # Definitions of the known and unknown fragments in knowns.
         definitions  => {},
         # Fragment definition separator.
-        separator    => $args{separator} || ' + ',
+        separator    => ' + ',
         # Known-but-not-defined definition output string.
-        not_defined  => $args{not_defined} || '.',
+        not_defined  => '.',
         # Unknown definition output string.
-        unknown      => $args{unknown} || '?',
+        unknown      => '?',
         # Known trimming regexp rules.
-        rules        => [],
-        # Globals used by the build_combinations method (and
-        # initialized by the _reset_parse method).
-        _new  => [],
-        _prev => 0,
+        constraints  => [],
+        @_,  # slurp anything else and override defaults.
     };
-
     bless $self, $class;
-
-    $self->parse if $self->word and $self->lexicon;
-
+    $self->_init();
     return $self;
+}  # }}}
+
+sub _init {  # {{{
+    my $self = shift;
+    warn "Entering _init()\n" if $self->{verbose};
+    $self->parse( $self->{word} ) if $self->{word} && $self->{lexicon};
 }  # }}}
 
 # Accessors {{{
 sub word {  # {{{
     my $self = shift;
-    if (@_) {
+    warn "word()\n" if $self->{verbose};
+    if( @_ ) {
         $self->{word} = shift;
-        $self->{_word_length} = length $self->{word};
+        warn "New word=$self->{word}\n" if $self->{verbose};
+        $self->{word_length} = length $self->{word};
+        warn "Length=$self->{word_length}\n" if $self->{verbose};
     }
     return $self->{word};
 }  # }}}
@@ -110,25 +114,24 @@ sub unknown {  # {{{
     return $self->{unknown};
 }  # }}}
 
-sub rules {  # {{{
+sub constraints {  # {{{
     my $self = shift;
-    $self->{rules} = shift if @_;
-    return $self->{rules};
+    $self->{constraints} = shift if @_;
+    return $self->{constraints};
 }  # }}}
 # }}}
 
-sub _reset_parse {  # {{{
+sub parse {  # {{{
     my $self = shift;
+    warn "Enter parse()\n" if $self->{verbose};
+    $self->word( shift ) if @_;
+    croak 'No word provided.' unless defined $self->{word};
+    # Reset our data structures.
     $self->parts([]);
     $self->combinations([]);
     $self->knowns({});
     $self->definitions({});
-    $self->{_new} = [];
-}  # }}}
-
-sub parse {  # {{{
-    my $self = shift;
-    $self->_reset_parse;
+    # Build new ones based on the word.
     $self->build_parts;
     $self->build_combinations;
     $self->build_knowns;
@@ -138,52 +141,68 @@ sub parse {  # {{{
 
 sub build_parts {  # {{{
     my $self = shift;
-
-    my $len = length $self->word;
-
-    for my $i (0 .. $len - 1) {
-        for my $j (1 .. $len - $i) {
-            push @{ $self->parts->[$i] }, substr $self->word, $i, $j;
+    warn "Entering build_parts() word=$self->{word} length=$self->{word_length}\n"
+        if $self->{verbose};
+    for my $i (0 .. $self->{word_length} - 1) {
+        for my $j (1 .. $self->{word_length} - $i) {
+            push @{ $self->{parts}[$i] },
+                substr $self->{word}, $i, $j;
         }
+    }
+    if($self->{verbose}) {
+        warn 'Parts: ';
+        warn "\t@$_\n" for @{ $self->{parts} };
     }
 }  # }}}
 
-sub build_combinations {
+sub build_combinations {  # {{{
     my $self = shift;
 
-    my @s = split //, $self->{word};
+    # field size for binary iteration (digits of precision)
+    my $y  = $self->{word_length} - 1;
+    # total number of combinations
+    my $z  = 2 ** $y - 1;
+    # field size for the count
+    my $lz = length $z;
+    # field size for a combination
+    my $m  = $self->{word_length} + $y;
+    warn "Combinations-1=$z, Field size=$m\n" if $self->{verbose};
 
-    my $x = length $self->{word};
-    my $y = $x - 1;
-    my $z = 2 ** $y - 1;
-
+    # Truth is a single partition character: the lowly dot.
     my $c = Math::BaseCalc->new( digits => [ 0, '.' ] );
 
+    # Build a word part combination for each iteration.
     for my $n ( 0 .. $z ) {
+        # Iterate in base two.
         my $i = $c->to_base( $n );
+
+        # Get the binary digits as an array.
         my @i = split //, sprintf( '%0'.$y.'s', $i );
 
+        # Join the character and digit arrays into a partitioned word.
         my $t = '';
-        for( @s ) {
-            # Zero values become ''. Haha!
-            my $j = shift( @i ) || '';
-            $t .= "$_$j";
+        # ..by stepping over the characters and peeling off a digit.
+        for( split //, $self->{word} ) {
+            # Zero values become ''. Haha!  Truth prevails.
+            $t .= $_ . (shift( @i ) || '');
         }
 
-#        printf "n=%".(length $z).'d, i=%'.$y.'s => %'.($x + $y)."s\n",
-#            $n, $i, $t;
-
-        push @{ $self->combinations }, $t;
+        unless( grep { $t =~ /$_/ } @{ $self->{constraints} } ) {
+            # Preach it.
+            printf '%'.$lz.'d) %0'.$y.'s => %'.$m."s\n", $n, $i, $t
+                if $self->{verbose};
+            push @{ $self->combinations }, $t;
+        }
     }
-}
+}  # }}}
 
 sub build_knowns {  # {{{
     my $self = shift;
 
     # Show familiar combinations for each "raw" combination.
-    for my $combo (@{ $self->combinations }) {
+    for my $combo (@{ $self->{combinations} }) {
         # Skip combinations that have already been seen.
-        next if exists $self->knowns->{$combo};
+        next if exists $self->{knowns}{$combo};
 
         my $sum = 0;
         my ($frag_sum, $char_sum) = (0, 0);
@@ -192,6 +211,7 @@ sub build_knowns {  # {{{
         my @chunks = split /\./, $combo;
 
         for (@chunks) {
+            # XXX What does this do again?
             # Handle hyphens in lexicon entries.
             ($_, my $combo_seen) = _hyphenate($_, $self->lexicon, 0);
 
@@ -206,9 +226,9 @@ sub build_knowns {  # {{{
         $combo = join '.', @chunks;
 
         # Save this combination and its familiarity ratios.
-        $self->knowns->{$combo} = [
+        $self->{knowns}{$combo} = [
             $frag_sum / @chunks,
-            $char_sum / $self->{_word_length}
+            $char_sum / $self->{word_length}
         ];
     }
 }  # }}}
@@ -216,11 +236,10 @@ sub build_knowns {  # {{{
 sub build_definitions {  # {{{
     my $self = shift;
     # Save combination entries with their definitions as the values.
-    for my $combo (keys %{ $self->knowns }) {
-        for (split /\./, $combo) {
-            $self->definitions->{$_} = exists $self->lexicon->{$_}
-                ? $self->lexicon->{$_}
-                : undef
+    for my $combo (keys %{ $self->{knowns} }) {
+        for my $part (split /\./, $combo) {
+            $self->{definitions}{$part} = $self->{lexicon}{$part}
+                if $self->{lexicon}{$part};
         }
     }
 }  # }}}
@@ -231,7 +250,7 @@ sub trim_knowns {  # {{{
     my %trimmed;
 
     # Make a familiar combination from each "raw" combination.
-    for my $combo (keys %{ $self->knowns }) {
+    for my $combo (keys %{ $self->{knowns} }) {
         # Skip combinations that have already been seen.
         next if exists $trimmed{$combo};
 
@@ -242,8 +261,8 @@ sub trim_knowns {  # {{{
 
         # Concatinate adjacent unknowns.
         for (@chunks) {
-            if (defined $self->definitions->{$_}) {
-                push @seen, scalar _hyphenate($unknown, $self->lexicon)
+            if (defined $self->{definitions}{$_}) {
+                push @seen, scalar _hyphenate($unknown, $self->{lexicon})
                     if $unknown;
                 push @seen, $_;
                 $unknown = '';
@@ -252,13 +271,14 @@ sub trim_knowns {  # {{{
                 $unknown = $unknown . $_;
             }
         }
-        push @seen, scalar _hyphenate($unknown, $self->lexicon)
+        push @seen, scalar _hyphenate($unknown, $self->{lexicon})
             if $unknown;
 
         # Add the combo to the trimmed combinations list and assign
         # the score from the "all possible combinations" list.
         $combo = join '.', @seen;
-        $trimmed{$combo} = $self->knowns->{$combo};
+        $trimmed{$combo} = $self->{knowns}{$combo}
+            if exists $self->{knowns}{$combo};
     }
 
     # Delete trimmed combinations that have defined lexicon entries
@@ -270,12 +290,12 @@ sub trim_knowns {  # {{{
 
         # Inspect each unknown chunk.
         for my $chunk (split /\./, $combo) {
-            next if defined $self->definitions->{$chunk};
+            next if defined $self->{definitions}{$chunk};
 
             # Do we contain a defined lexicon entry?
             for my $entry (
-                grep { defined $self->definitions->{$_} }
-                    sort keys %{ $self->definitions }
+                grep { defined $self->{definitions}{$_} }
+                    sort keys %{ $self->{definitions} }
             ) {
                 # Strip off the stem-hyphen, if it exists.
                 $entry =~ s/-//;
@@ -296,22 +316,6 @@ sub trim_knowns {  # {{{
         delete $trimmed{$combo} if $seen_position >= 0;
     }
 
-    # Execute user provided regular expressions.
-    for my $combo (sort keys %trimmed) {
-        my $matched = 0;
-
-        # Flag matching rules as bogus.
-        for my $rule (@{ $self->rules }) {
-            if ($combo =~ /$rule/) {
-                $matched++;
-                last;
-            }
-        }
-
-        # Remove this combination if it was flagged as being bogus.
-        delete $trimmed{$combo} if $matched;
-    }
-
     # Set the knowns list to the new trimmed list.
     $self->knowns(\%trimmed);
 }  # }}}
@@ -322,7 +326,7 @@ sub learn {  # {{{
     # Loop through each looking in %args or prompting for a definition.
 }  # }}}
 
-# Update the given string with it's actual lexicon value and increment
+# Update the given string with its actual lexicon value and increment
 # the seen flag.
 sub _hyphenate {  # {{{
     my ($string, $lexicon, $combo_seen) = @_;
@@ -345,34 +349,33 @@ sub _hyphenate {  # {{{
 sub output_knowns {  # {{{
     my $self = shift;
     my @out = ();
-
     my $header = <<HEADER;
 Combination [frag familiarity, char familiarity]
 Fragment definitions
 
 HEADER
 
-    for (reverse sort {
-            $self->knowns->{$a}[0] <=> $self->knowns->{$b}[0]
-            ||
-            $self->knowns->{$a}[1] <=> $self->knowns->{$b}[1]
-        } keys %{ $self->knowns }
+    for my $known (
+        reverse sort {
+            $self->{knowns}{$a}[0] <=> $self->{knowns}{$b}[0] ||
+            $self->{knowns}{$a}[1] <=> $self->{knowns}{$b}[1]
+        } keys %{ $self->{knowns} }
     ) {
         my @definition;
-        for my $chunk (split /\./) {
+        for my $chunk (split /\./, $known) {
             push @definition,
-                defined $self->definitions->{$chunk}
-                    ? $self->definitions->{$chunk}
-                        ? $self->definitions->{$chunk}
-                        : $self->not_defined
-                    : $self->unknown;
+                defined $self->{definitions}{$chunk}
+                    ? $self->{definitions}{$chunk}
+                        ? $self->{definitions}{$chunk}
+                        : $self->{not_defined}
+                    : $self->{unknown};
         }
 
         push @out, sprintf qq/%s [%s]\n%s/,
-            $_,
+            $known,
             join (', ', map { sprintf '%0.2f', $_ }
-                @{ $self->knowns->{$_} }),
-            join ($self->separator, @definition);
+                @{ $self->{knowns}{$known} }),
+            join ($self->{separator}, @definition);
     }
 
     return wantarray ? @out : $header . join "\n\n", @out;
@@ -399,7 +402,6 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
   print scalar $obj->output_knowns;
 
   # Okay.  Now, let's parse a new word.
-  $obj->word('metaphysical');
   $obj->lexicon({
       'meta-' => 'more comprehensive',
       'ta'    => '',
@@ -407,8 +409,8 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
       '-ic'   => 'being, containing',
       '-al'   => 'relating to, characterized by',
   });
-  $obj->rules([ qr/^me\./ ]);  # Remove combos that start with "me."
-  $obj->parse;
+  $obj->constraints([ qr/^me\./ ]);
+  $obj->parse('metaphysical');
   my @knowns = $obj->output_knowns;
 
 =head1 DESCRIPTION
@@ -473,12 +475,12 @@ mark (?).
 =head2 parse()
 
   $obj->parse;
+  $obj->parse($word);
 
 This method resets the partition lists and then calls all the 
 indiviual parsing methods that are detailed below.
 
-Call this method after resetting the object with a new word and 
-optionally, a new lexicon.
+If a string is provided the word to parse is first set to that.
 
 =head2 build_parts()
 
@@ -491,8 +493,8 @@ method.
 
   $obj->build_combinations;
 
-Compute the array of all possible word part combinations, accessed via
-the combinations method.
+Compute the array of all possible word part combinations, excluding
+constraints and accessed via the combinations method.
 
 =head2 build_knowns()
 
@@ -521,12 +523,9 @@ via the definitions method.
 Trim the hash of known combinations by concatinating adjacent unknown
 fragments and throwing out combinations with a score of zero.
 
-The end of this method is where user defined rules are processed.
-
 =head2 output_knowns()
 
   print scalar $obj->output_knowns;
-
   @knowns = $obj->output_knowns;
 
 Convenience method to return the familiar word part combinations with
@@ -537,17 +536,11 @@ In scalar context, a single, newline separated string is returned.
 In array context, each of these scored combinations, with their 
 fragment definitions is a separate entry in an array.
 
-Here is the format of the output:
-
-  Combination [fragment familiarity, character familiarity]
-  Fragment definitions (with the defined fragment and unknown
-  separator).
-
 =head1 ACCESSORS
 
 These accessors both get and set their respective values.  Note 
-that, if you set the word, lexicon or rules after construction, you 
-must manually initialize the parse lists and run the partition 
+that, if you set the word, lexicon or constraints after construction,
+you must manually initialize the parse lists and run the partition 
 methods (via the parse method).
 
 Also, note that it is useless to set the parts, combinations and 
@@ -568,8 +561,10 @@ not_defined and unknown strings.
   $lexicon = $obj->lexicon(\%lexicon);
 
 The lexicon is a hash reference with word fragments as keys and
-definitions their respecive values.  Definitions must be defined in 
-order for the C<trim_knowns> method to work properly.
+definitions their respective values.
+
+Note that the definitions must all be defined in order for the
+C<trim_knowns> method to work properly.
 
 =head2 parts()
 
@@ -607,16 +602,13 @@ computed by the C<build_knowns> method.
 The hash reference of the definitions provided for each fragment of 
 the combinations with the values of unknown fragments set to undef.
 
-=head2 rules()
+=head2 constraints()
 
-  $rules = $obj->rules(\@rules);
+  $constraints = $obj->constraints(\@regexps);
 
 An optional, user defined array reference of regular expressions to
 apply to the list of known combinations.  If a match is successful, 
-the entry is removed from the list.
-
-To reiterate, this is a negative, pruning device, that is used in the
-C<trim_knowns> method.
+the entry is excluded from the list.
 
 =head2 separator()
 
@@ -662,9 +654,7 @@ L<Math::BaseCalc>
 
 =head1 DEDICATION
 
-For my Grandmother and English teacher
-
-Frances Jones E<lt>frances@theletterlink.comE<gt>
+For my Grandmother and English teacher Frances Jones.
 
 =head1 THANK YOU
 

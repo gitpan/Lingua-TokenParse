@@ -4,7 +4,6 @@
 
 README - This file.
 dict_fetch - Program to grab entries from a dictionary server.
-sample0 - The module's SYNOPSIS section.
 sample1 - A simple example program.
 sample2 - An example program that calls dict_fetch.
 set_entry - A handy CGI that I use to assist in populating lexicons.
