@@ -1,8 +1,7 @@
 package Lingua::TokenParse;
 
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.12.2';
+use vars qw($VERSION); $VERSION = '0.12.3';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -399,13 +398,11 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
   $obj->parse;
   my @knowns = $obj->output_knowns;
 
-=head1 ABSTRACT
+=head1 DESCRIPTION
 
 This class represents a Lingua::TokenParse object and contains 
 methods to parse a given word into familiar combinations based on a 
 lexicon of known word parts.
-
-=head1 DESCRIPTION
 
 A word like "partition" is actually composed of a few different word
 parts.  Given a lexicon of known fragments, it is possible to 
@@ -658,7 +655,7 @@ My Grandmother and English teacher - Frances Jones
 
 =head1 AUTHOR
 
-Gene Boggs E<lt>cpan@ology.netE<gt>
+Gene Boggs E<lt>gene@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

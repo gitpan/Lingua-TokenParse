@@ -1,5 +1,5 @@
-Lingua/TokenParse version 0.12.2
-================================
+Lingua/TokenParse distribution
+==============================
 
 INSTALLATION
 
@@ -12,7 +12,7 @@ To install this module type the following:
 
 DEPENDENCIES
 
-None
+Test::More
 
 HISTORY
 

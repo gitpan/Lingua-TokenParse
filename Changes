@@ -111,3 +111,6 @@ Revision history for Perl extension Lingua::TokenParse.
 
 0.12.2  Mon Jun 16 2003
     - Repaired documentation.
+
+0.12.3  Fri Jul 11 2003
+    - Excised the unnecessary =head1 ABSTRACT section.
