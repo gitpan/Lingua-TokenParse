@@ -419,6 +419,5 @@ is scalar $obj->output_knowns, $scalar_out,
 
 $obj->rules([ qr/\.on$/ ]);
 $obj->parse;
-is_deeply $obj->knowns, {
-    'part.i.tion' => [1, 1],
-}, 'trimming regexp';
+is_deeply $obj->knowns, { 'part.i.tion' => [1, 1] },
+    'trimming regexp';

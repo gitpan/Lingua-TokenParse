@@ -1,4 +1,4 @@
-Lingua/TokenParse version 0.11
+Lingua/TokenParse version 0.12
 ==============================
 
 INSTALLATION
@@ -24,4 +24,3 @@ Copyright (C) 2003 Gene Boggs
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
-

@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -17,7 +17,7 @@ sub new {  # {{{
         # The word to parse!
         word         => $args{word} || undef,
         # We need to use the length of our word in a few methods.
-        _word_length => exists $args{word} ? length ($args{word}) : undef,
+        _word_length => exists $args{word} ? length ($args{word}) : 0,
         # Known tokens.
         lexicon      => $args{lexicon} || {},
         # All word parts.
@@ -30,10 +30,14 @@ sub new {  # {{{
         definitions  => {},
         # Fragment definition separator.
         separator    => $args{separator} || ' + ',
+        # Known-but-not-defined definition output string.
+        not_defined  => $args{not_defined} || '.',
+        # Unknown definition output string.
+        unknown      => $args{unknown} || '?',
         # Known trimming regexp rules.
         rules        => [],
         # Globals used by the build_combinations method (and
-        # initialized by the _reset_parse() method).
+        # initialized by the _reset_parse method).
         _new  => [],
         _prev => 0,
     };
@@ -89,6 +93,18 @@ sub separator {  # {{{
     my $self = shift;
     $self->{separator} = shift if @_;
     return $self->{separator};
+}  # }}}
+
+sub not_defined {  # {{{
+    my $self = shift;
+    $self->{not_defined} = shift if @_;
+    return $self->{not_defined};
+}  # }}}
+
+sub unknown {  # {{{
+    my $self = shift;
+    $self->{unknown} = shift if @_;
+    return $self->{unknown};
 }  # }}}
 
 sub rules {  # {{{
@@ -334,8 +350,8 @@ HEADER
                 defined $self->definitions->{$chunk}
                     ? $self->definitions->{$chunk}
                         ? $self->definitions->{$chunk}
-                        : '.'
-                    : '?';
+                        : $self->not_defined
+                    : $self->unknown;
         }
 
         push @out, sprintf qq/%s [%s]\n%s/,
@@ -398,7 +414,7 @@ This familiarity measure is a set of simple ratios of known to
 unknown parts.
 
 Note that the lexicon must have definitions for each entry, in order 
-to have the current trim_knowns() method do the right thing.  The 
+to have the current trim_knowns method do the right thing.  The 
 definition can be an empty string (i.e. '').  If the definition is 
 undefined, the fragment is considered an unknown.
 
@@ -410,15 +426,37 @@ examples of how this module can be used.
 =head2 new()
 
   $obj = Lingua::TokenParse->new(
-      word      => $word,
-      lexicon   => \%lexicon,
-      separator => $separator,
+      word        => $word,
+      lexicon     => \%lexicon,
+      separator   => $separator,
+      not_defined => $not_defined,
+      unknown     => $unknown,
   );
 
 Return a new Lingua::TokenParse object.
 
 This method will automatically call the partition methods (detailed 
 below) if a word and lexicon are provided.
+
+The word can be any string, however, you will want to make sure that 
+it does not include the same characters you use for the separator,
+not_defined and unknown strings (described below).
+
+The lexicon must be a hash reference with word fragments as keys and
+definitions their respecive values.  Definitions must be defined in 
+order for the trim_knowns method work properly.
+
+The separator is the string used to separate fragment definitions in
+the output_knowns method.  The default is a plus symbol surrounded 
+by single spaces (' + ').
+
+The not_defined argument is the the string used by the output_knowns 
+method to indicate a known fragment that has no 
+definition.  The default is a period (.).
+
+The unknown argument is the the string used by the output_knowns 
+method to indicate an unknown fragment.  The default is the question
+mark (?).
 
 =head2 parse()
 
@@ -434,7 +472,7 @@ optionally, a new lexicon.
 
   $obj->build_parts();
 
-Construct an array of the word partitions, accessed via the parts() 
+Construct an array of the word partitions, accessed via the parts
 method.
 
 =head2 build_combinations()
@@ -442,13 +480,13 @@ method.
   $obj->build_combinations();
 
 Recursively compute the array of all possible word part combinations,
-accessed via the combinations() method.
+accessed via the combinations method.
 
 =head2 build_knowns()
 
   $obj->build_knowns();
 
-Compute the familiar word part combinations, accessed via the knowns()
+Compute the familiar word part combinations, accessed via the knowns
 method.
 
 This method handles word parts containing prefix and suffix hyphens,
@@ -462,7 +500,7 @@ combinations).
 
 Construct a hash of the definitions of the word parts in each 
 combination in the keys of the knowns hash.  This hash is accessed
-via the definitions() method.
+via the definitions method.
 
 =head2 trim_knowns()
 
@@ -498,7 +536,7 @@ Here is the format of the output:
 These accessors both get and set their respective values.  Note 
 that, if you set the word, lexicon or rules after construction, you 
 must manually initialize the parse lists and run the partition 
-methods (via the parse() method).
+methods (via the parse method).
 
 Also, note that it is useless to set the parts, combinations and 
 knowns lists, since they are computed by the partition methods.
@@ -509,12 +547,17 @@ knowns lists, since they are computed by the partition methods.
 
 The actual word to partition.
 
+Ths word can be any string, however, you will want to make sure that 
+it does not include the same characters you use for the separator,
+not_defined and unknown strings.
+
 =head2 lexicon()
 
   $lexicon = $obj->lexicon(\%lexicon);
 
-The hash reference of word parts (keys) with their (optional) 
-definitions (values).
+The lexicon is a hash reference with word fragments as keys and
+definitions their respecive values.  Definitions must be defined in 
+order for the trim_knowns method to work properly.
 
 =head2 parts()
 
@@ -523,7 +566,7 @@ definitions (values).
 The array reference of word partitions.
 
 Note that this method is only useful for fetching, since the parts 
-are computed by the build_parts() method.
+are computed by the build_parts method.
 
 =head2 combinations()
 
@@ -532,7 +575,7 @@ are computed by the build_parts() method.
 The array reference of all possible word part combinations.
 
 Note that this method is only useful for fetching, since the 
-combinations are computed by the build_combinations() method.
+combinations are computed by the build_combinations method.
 
 =head2 knowns()
 
@@ -543,7 +586,7 @@ familiarity scores (values).  Note that only the non-zero scored
 combinations are kept.
 
 Note that this method is only useful for fetching, since the knowns
-are computed by the build_knowns() method.
+are computed by the build_knowns method.
 
 =head2 definitions()
 
@@ -552,15 +595,6 @@ are computed by the build_knowns() method.
 The hash reference of the definitions provided for each fragment of 
 the combinations in the knowns hash.  Note that the unknown 
 fragments are defined as an empty string.
-
-=head2 separator()
-
-  $separator = $obj->separator($separator);
-
-The character (or characters) separating the fragment definitions that
-are produced by the output_knowns() method.
-
-The default is ' + ' (a plus symbol surrounded by single spaces).
 
 =head2 rules()
 
@@ -571,7 +605,31 @@ the list of known combinations.  If a match is successful, the entry
 is removed from the list.
 
 To reiterate, this is a negative, pruning device, that is used in the
-trim_knowns() method.
+trim_knowns method.
+
+=head2 separator()
+
+  $separator = $obj->separator($separator);
+
+The separator is the string used to separate fragment definitions in
+the output_knowns method.  The default is a plus symbol surrounded 
+by single spaces (' + ').
+
+=head2 not_defined()
+
+  $not_defined = $obj->not_defined($not_defined);
+
+The not_defined argument is the the string used by the output_knowns 
+method to indicate a known fragment that has no 
+definition.  The default is a period (.).
+
+=head2 unknown()
+
+  $unknown = $obj->unknown($unknown);
+
+The unknown argument is the the string used by the output_knowns 
+method to indicate an unknown fragment.  The default is the question
+mark (?).
 
 =head1 DEPENDENCIES
 

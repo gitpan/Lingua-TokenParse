@@ -15,8 +15,8 @@ Revision history for Perl extension Lingua::TokenParse.
 
 0.04  Tue Apr 8 2003
     - Removed the misleading ..okay broken code to concatinate
-      unknown fragments in the build_knowns() method.
-    - Added the entirely crucial, and sorely lacking, reset_parse()
+      unknown fragments in the build_knowns method.
+    - Added the entirely crucial, and sorely lacking, reset_parse
       method.
     - Added an attribute and build method for the fragment
       definitions in the knowns hash.
@@ -25,19 +25,20 @@ Revision history for Perl extension Lingua::TokenParse.
     - Updated the test suite.
 
 0.05  Wed Apr 9 2003
-    - Added a trim_knowns() method to concatinate unknowns and remove
+    - Added a trim_knowns method to concatinate unknowns and remove
       "already seen" combinations.
-    - Added a parse() method to call the individual parsing methods.
+    - Added a parse method to call the individual parsing methods.
     - Updated documentation.
     - Updated eg/ samples.
     - Repaired the broken test suite.
 
 0.06  Thu Apr 10 2003
-    - Made the output_knowns() method show the fragment definitions.
+    - Made the output_knowns method show the fragment definitions.
     - Added the token_parse CGI to the eg/ directory.
 
 0.07  Thu Apr 10 2003
-    - Moved the publically unnecessary reset_parse() method to parse().
+    - Moved the publically unnecessary reset_parse method to the parse
+      method.
     - Updated the documentation and eg/sample0, accordingly.
 
 0.07.1  Thu Apr 10 2003
@@ -45,12 +46,12 @@ Revision history for Perl extension Lingua::TokenParse.
 
 0.08  Sun Apr 13 2003
     - Removed documentation of the (probably) unnecessary
-      _reset_parse() method.
+      _reset_parse method.
     - Cleaned up code a bit, again.
-    - Made the output_knowns() method return a string, instead of
+    - Made the output_knowns method return a string, instead of
       printing it.  Oops.
     - Updated documentation, of course.
-    - Added the output_knowns() method to the test suite.
+    - Added the output_knowns method to the test suite.
     - Updated eg/sample0 (accordance with the module's SYNOPSIS).
     - Added an eg/README file to describe the sample programs.
 
@@ -67,15 +68,15 @@ Revision history for Perl extension Lingua::TokenParse.
       changed it to a "+" by default, in the constructor.
     - Added eg/set_entry and updated eg/README accordingly.
     - Skipped already seen combinations in the build_combinations()
-      and trim_knowns() methods.
+      and trim_knowns methods.
     - Made the known combination score a two dimensional measure and
       fixed the output_knowns(), accordingly.
     - Added a friendly, explanatory header to the scalar output of the
-      the output_knowns() method.
+      the output_knowns method.
     - Fixed and updated documentation.
     - Fixed the call to output_knowns() in the eg/ programs.
     - Removed the unused @parsed array and made the other (two)
-      globals used by the build_combinations() method into object
+      globals used by the build_combinations method into object
       attributes.
 
 0.10  Sun Apr 29 2003
@@ -93,8 +94,14 @@ Revision history for Perl extension Lingua::TokenParse.
     - Fixed documentation as usual...
 
 0.11  Thu May 1 2003
-    - Made the trim_knowns() method work for "defined but false"
+    - Made the trim_knowns method work for "defined but false"
       lexicon entries.
     - Updated documentation.
     - Updated eg/sample0 accordingly.
     - Repaired dates in the Changes file.
+
+0.12  Thu May 1 2003
+    - Made accessors for the "known but not defined" and unknown
+      fragment definitions used by the output_knowns method.
+    - Added documentation sections accordingly.
+    - Cleaned documentation a bit, of course.
