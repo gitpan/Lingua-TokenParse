@@ -1,0 +1,6 @@
+Revision history for Perl extension Lingua::TokenParse.
+
+0.01  Thu Apr  3 20:03:39 2003
+	- original version; created by h2xs 1.22 with options
+		-X -n Lingua::TokenParse
+
