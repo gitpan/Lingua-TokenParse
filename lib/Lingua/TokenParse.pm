@@ -1,8 +1,11 @@
-package Lingua::TokenParse;
+# $Id: TokenParse.pm,v 1.5 2004/05/16 02:41:51 gene Exp $
 
+package Lingua::TokenParse;
+$VERSION = '0.14';
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.13';
+use warnings;
+use Carp;
+use Math::BaseCalc;
 
 # The {{{ and }}} markers are "editor code fold".  They are merely a
 # convenience for people who don't care to scroll through reams of
@@ -145,7 +148,7 @@ sub build_parts {  # {{{
     }
 }  # }}}
 
-sub build_combinations {  # {{{
+sub old_build_combinations {  # {{{
     my ($self, $i) = @_;
 
     # What iteration through the combo list are we?
@@ -177,6 +180,35 @@ sub build_combinations {  # {{{
         $self->build_combinations($n);
     }
 }  # }}}
+
+sub build_combinations {
+    my $self = shift;
+
+    my @s = split //, $self->{word};
+
+    my $x = length $self->{word};
+    my $y = $x - 1;
+    my $z = 2 ** $y - 1;
+
+    my $c = Math::BaseCalc->new( digits => [ 0, '.' ] );
+
+    for my $n ( 0 .. $z ) {
+        my $i = $c->to_base( $n );
+        my @i = split //, sprintf( '%0'.$y.'s', $i );
+
+        my $t = '';
+        for( @s ) {
+            # Zero values become ''. Haha!
+            my $j = shift( @i ) || '';
+            $t .= "$_$j";
+        }
+
+#        printf "n=%".(length $z).'d, i=%'.$y.'s => %'.($x + $y)."s\n",
+#            $n, $i, $t;
+
+        push @{ $self->combinations }, $t;
+    }
+}
 
 sub build_knowns {  # {{{
     my $self = shift;
@@ -492,8 +524,8 @@ method.
 
   $obj->build_combinations;
 
-Recursively compute the array of all possible word part combinations,
-accessed via the combinations method.
+Compute the array of all possible word part combinations, accessed via
+the combinations method.
 
 =head2 build_knowns()
 
@@ -643,18 +675,6 @@ The unknown argument is the the string used by the output_knowns
 method to indicate an unknown fragment.  The default is the question
 mark (?).
 
-=head1 DEPENDENCIES
-
-None
-
-=head1 DISCLAIMER
-
-This module uses some clunky, inefficient algorithms.  For instance,
-a 50 letter word (like a medical term) just might take until the end
-of time to parse and possibly longer.  Only I have been able to devise
-alternate algorithms even though I have asked for all over for 
-years now...  Please write to me with improvements.
-
 =head1 TO DO
 
 Compute the time required for a given parse.
@@ -671,7 +691,7 @@ That is, go in reverse.  Non-trivial!
 
 =head1 SEE ALSO
 
-Notice that there is nothing but this sentence in this section?
+L<Math::BaseCalc>
 
 =head1 DEDICATION
 
@@ -679,9 +699,10 @@ For my Grandmother and English teacher
 
 Frances Jones E<lt>frances@theletterlink.comE<gt>
 
-=head1 CVS
+=head1 THANK YOU
 
-$Id: TokenParse.pm,v 1.4 2004/02/07 05:12:56 gene Exp $
+Thank you to Luc St-Louis for helping me increase the speed while
+eliminating the exponential memory footprint.  lucs++
 
 =head1 AUTHOR
 
