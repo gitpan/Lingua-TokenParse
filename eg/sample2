@@ -19,18 +19,20 @@ do 'dict_fetch' unless @ARGV or -e $lexicon_file;
 my %lexicon;
 
 if (@ARGV) {
-    # We want to manually define it.
-    @lexicon{@ARGV} = ();
+    # We want to manually define it with bogus definitions.
+    @lexicon{@ARGV} = ('x') x @ARGV;
 }
 elsif (-e $lexicon_file) {
     # Tie to a dbm for if it's present.
     print "* Tie to existing lexicon dbm.\n";
     tie %lexicon, 'DB_File', $lexicon_file;
+    # Define our lexicon with bogus definitions.
+    @lexicon{ keys %lexicon } = ('x') x keys %lexicon;
 }
 else {
     # Use made up fragments by default.
     print "* Using made up fragments.\n";
-    @lexicon{qw(-ti -art -ion)} = ();
+    @lexicon{qw(part- -tion -on)} = qw(foo bar baz);
 }
 
 # Dump stuff.

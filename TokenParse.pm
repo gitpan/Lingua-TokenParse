@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.04';
+$VERSION = '0.05';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
@@ -34,12 +34,7 @@ sub new {  # {{{
 
     bless $self, $class;
 
-    if ($args{word} and $args{lexicon}) {
-        $self->build_parts;
-        $self->build_combinations;
-        $self->build_knowns;
-        $self->build_definitions;
-    }
+    $self->parse if $self->word and $self->lexicon;
 
     return $self;
 }  # }}}
@@ -93,6 +88,15 @@ sub reset_parse {  # {{{
     $self->definitions({});
     @parsed = ();
     @new    = ();
+}  # }}}
+
+sub parse {  # {{{
+    my $self = shift;
+    $self->build_parts;
+    $self->build_combinations;
+    $self->build_knowns;
+    $self->build_definitions;
+    $self->trim_knowns;
 }  # }}}
 
 sub build_parts {  # {{{
@@ -197,6 +201,79 @@ sub build_definitions {  # {{{
     }
 }  # }}}
 
+sub trim_knowns {  # {{{
+    my $self = shift;
+
+    my %trimmed;
+
+    # Make a familiar combination from each "raw" combination.
+    for my $combo (keys %{ $self->knowns }) {
+        # Get the bits of the combination.
+        my @chunks = split /\./, $combo;
+        my @seen = ();
+        my $unknown = '';
+
+        # Concatinate adjacent unknowns.
+        for (@chunks) {
+            if (defined $self->definitions->{$_}) {
+                if ($unknown) {
+                    if (exists $self->lexicon->{"-$unknown"}) {
+                        $unknown = "-$unknown";
+                    }
+                    elsif (exists $self->lexicon->{"$unknown-"}) {
+                        $unknown = "$unknown-";
+                    }
+                    push @seen, $unknown;
+                }
+                push @seen, $_;
+                $unknown = '';
+            }
+            else {
+                $unknown = $unknown . $_;
+            }
+        }
+        if ($unknown) {
+            if (exists $self->lexicon->{"-$unknown"}) {
+                $unknown = "-$unknown";
+            }
+            elsif (exists $self->lexicon->{"$unknown-"}) {
+                $unknown = "$unknown-";
+            }
+            push @seen, $unknown;
+        }
+
+        $combo = join '.', @seen;
+        $trimmed{$combo} = $self->knowns->{$combo};
+    }
+
+    # Delete trimmed combinations that have defined lexicon entries
+    # in the unknowns.
+    for my $combo (sort keys %trimmed) {
+        my $flag = -1;
+
+        # Inspect each combination chunk.
+        for my $chunk (split /\./, $combo) {
+            next if $self->definitions->{$chunk};
+
+            # Does the unknown chunk contain a defined lexicon entry?
+            for my $entry (
+                grep { defined $self->definitions->{$_} }
+                    sort keys %{ $self->definitions }
+            ) {
+                $entry =~ s/-//;
+                $flag = index $chunk, $entry;
+                last if $flag >= 0;
+            }
+
+            last if $flag >= 0;
+        }
+
+        delete $trimmed{$combo} if $flag >= 0;
+    }
+
+    $self->knowns(\%trimmed);
+}  # }}}
+
 sub output_knowns {  # {{{
     my $self = shift;
 
@@ -221,40 +298,25 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
 
   my $word = 'partition';
   my %lexicon;
-  @lexicon{qw(part i tion on)} = ();
-
+  @lexicon{qw(ti art ion)} = qw(foo bar baz);
   my $obj = Lingua::TokenParse->new(
       word => $word,
       lexicon => \%lexicon,
   );
-
   $obj->output_knowns;
 
   # Okay.  Now, let's parse a new word.
   $obj->reset_parse;
-
   $obj->word('metaphysical');
-
   $obj->lexicon({
       'meta-' => 'more comprehensive',
+      'ta'    => 'foo',
       'phys'  => 'natural science, singular',
       '-ic'   => 'being, containing',
       '-al'   => 'relating to, characterized by',
   });
-
-  $obj->build_parts;
-  $obj->build_combinations;
-  $obj->build_knowns;
-  $obj->build_definitions;
-
+  $obj->parse;
   $obj->output_knowns;
-
-  print "@$_\n" for @{ $obj->parts };  # This has nice looking output.
-  use Data::Dumper;
-  print Dumper $obj->parts;
-  print Dumper $obj->combinations;
-  print Dumper $obj->knowns;
-  print Dumper $obj->definitions;
 
 =head1 ABSTRACT
 
@@ -272,6 +334,10 @@ represents a measure of familiarity.
 
 Currently, this familiarity mesasure is a simple ratio of known to 
 unknown parts.
+
+* Please note that your lexicon absolutely must have definitions for 
+each entry in order to have the current trim_knowns() method do the 
+right thing.  Yes, this will be fixed in a coming version...  : )
 
 * Please check out the sample code in the distribution's eg/ 
 directory for exciting examples of how this module can be used.
@@ -292,10 +358,22 @@ below) if a word and lexicon are provided.
 
 =head2 reset_parse()
 
+  $obj->reset_parse();
+
 Reset the lists used to parse a word into fragment combinations.
 
 That method must be called prior to reparsing a new word in the same 
 session.
+
+=head2 parse()
+
+  $obj->parse();
+
+This is a convenience method that simply calls all the indiviual 
+parsing methods that are detailed below.
+
+Call this method after resetting the object with a new word and 
+optionally, a new lexicon.
 
 =head2 build_parts()
 
@@ -331,6 +409,13 @@ out bogus combinations).
 Construct a hash of the definitions of the word parts in each 
 combination in the keys of the knowns hash.
 
+=head2 trim_knowns()
+
+  $obj->trim_knowns();
+
+Construct an array of the known combinations, with the adjacent 
+unknown fragments concatinated.
+
 =head2 output_knowns()
 
   $obj->output_knowns();
@@ -354,7 +439,7 @@ The actual word to partition.
 
 =head2 lexicon()
 
-  $lexicon = $obj->lexicon($lexicon);
+  $lexicon = $obj->lexicon(\%lexicon);
 
 The hash reference of word parts (keys) with their (optional) 
 definitions (values).
@@ -390,7 +475,7 @@ are computed by the build_knowns() method.
 
 =head2 definitions()
 
-  $definitions = definitions();
+  $definitions = $obj->definitions();
 
 The hash reference of the definitions provided for each fragment of 
 the combinations in the knowns hash.  Note that the unknown 
@@ -408,10 +493,6 @@ of time to parse and possibly longer.  Please write to me with
 improvements!
 
 =head1 TO DO
-
-Trim the known combinations (and definition list) down to ones that
-concatinate the adjacent unknown fragments together.  Then throw out 
-the ones with known fragments within that "unknown chunk".
 
 Calculate familiarity with more granularity.  Possibly with a
 multidimensional measure.

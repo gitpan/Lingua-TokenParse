@@ -1,73 +1,72 @@
 use strict;
-use Data::Dumper;
 use Test::More tests => 5;
 
 BEGIN { use_ok('Lingua::TokenParse') };
 
 my $parts = [  # {{{
-          [
-            'p',
-            'pa',
-            'par',
-            'part',
-            'parti',
-            'partit',
-            'partiti',
-            'partitio',
-            'partition',
-          ],
-          [
-            'a',
-            'ar',
-            'art',
-            'arti',
-            'artit',
-            'artiti',
-            'artitio',
-            'artition',
-          ],
-          [
-            'r',
-            'rt',
-            'rti',
-            'rtit',
-            'rtiti',
-            'rtitio',
-            'rtition',
-          ],
-          [
-            't',
-            'ti',
-            'tit',
-            'titi',
-            'titio',
-            'tition',
-          ],
-          [
-            'i',
-            'it',
-            'iti',
-            'itio',
-            'ition',
-          ],
-          [
-            't',
-            'ti',
-            'tio',
-            'tion',
-          ],
-          [
-            'i',
-            'io',
-            'ion',
-          ],
-          [
-            'o',
-            'on',
-          ],
-          [
-            'n',
-          ],
+    [
+        'p',
+        'pa',
+        'par',
+        'part',
+        'parti',
+        'partit',
+        'partiti',
+        'partitio',
+        'partition',
+    ],
+    [
+        'a',
+        'ar',
+        'art',
+        'arti',
+        'artit',
+        'artiti',
+        'artitio',
+        'artition',
+    ],
+    [
+        'r',
+        'rt',
+        'rti',
+        'rtit',
+        'rtiti',
+        'rtitio',
+        'rtition',
+    ],
+    [
+        't',
+        'ti',
+        'tit',
+        'titi',
+        'titio',
+        'tition',
+    ],
+    [
+        'i',
+        'it',
+        'iti',
+        'itio',
+        'ition',
+    ],
+    [
+        't',
+        'ti',
+        'tio',
+        'tion',
+    ],
+    [
+        'i',
+        'io',
+        'ion',
+    ],
+    [
+        'o',
+        'on',
+    ],
+    [
+        'n',
+    ],
 ];  # }}}
 
 my $combinations = [  # {{{
@@ -330,30 +329,45 @@ my $combinations = [  # {{{
 ];  # }}}
 
 my $knowns = {  # {{{
-    'part.i.tion'   => '1',
-    'part.i.t.i.on' => '0.8',
-    'part.i.ti.on'  => '0.75',
-    'part.it.i.on'  => '0.75',
-    'part.ition'    => '0.5',
-    'parti.tion'    => '0.5',
-    'partiti.on'    => '0.5',
-    'part.iti.on'   => '0.666666666666667',
-    'partit.i.on'   => '0.666666666666667',
+    'part.i.tion' => '1',
+    'part.i.t.i.on' => '0.8'
 };  # }}}
 
 my $definitions = {  # {{{
-    'i'       => 'b',
-    'it'      => undef,
-    'iti'     => undef,
-    'ition'   => undef,
-    'on'      => 'd',
-    'part'    => 'a',
-    'parti'   => undef,
-    'partit'  => undef,
+    'a' => undef,
+    'arti' => undef,
+    'tio' => undef,
+    'on' => 'd',
+    'rt' => undef,
+    'io' => undef,
+    't' => undef,
+    'rtiti' => undef,
+    'parti' => undef,
+    'tion' => 'c',
     'partiti' => undef,
-    't'       => undef,
-    'ti'      => undef,
-    'tion'    => 'c',
+    'r' => undef,
+    'par' => undef,
+    'ition' => undef,
+    'ti' => undef,
+    'pa' => undef,
+    'partit' => undef,
+    'iti' => undef,
+    'i' => 'b',
+    'n' => undef,
+    'it' => undef,
+    'itio' => undef,
+    'art' => undef,
+    'part' => 'a',
+    'artit' => undef,
+    'ar' => undef,
+    'p' => undef,
+    'titi' => undef,
+    'ion' => undef,
+    'tit' => undef,
+    'rtit' => undef,
+    'rti' => undef,
+    'o' => undef,
+    'artiti' => undef
 };  # }}}
 
 my %lexicon;

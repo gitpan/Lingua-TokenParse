@@ -14,16 +14,18 @@ my %lexicon;
 
 # Define our lexicon.
 if (@ARGV) {
-    # We want to manually define it.
-    @lexicon{@ARGV} = ();
+    # We want to manually define it with bogus definitions.
+    @lexicon{@ARGV} = ('x') x @ARGV;
 }
 elsif (-e $lexicon_file) {
     print "* Tie to existing dbm.\n";
     tie %lexicon, 'DB_File', $lexicon_file;
+    # Define our lexicon with bogus definitions.
+    @lexicon{ keys %lexicon } = ('x') x keys %lexicon;
 }
 else {
     print "* Use made up fragments.\n";
-    @lexicon{qw(part- -tion -on)} = ();
+    @lexicon{qw(part- -tion -on)} = qw(foo bar baz);
 }
 
 # Dump stuff.

@@ -23,3 +23,11 @@ Revision history for Perl extension Lingua::TokenParse.
     - Enhanced the eg/ directory.
     - Updated the documentation.
     - Updated the test suite.
+
+0.05  Wed Apr 9
+    - Added a trim_knowns() method to concatinate unknowns and remove
+      "already seen" combinations.
+    - Added a parse() method to call the individual parsing methods.
+    - Updated documentation.
+    - Updated eg/ samples.
+    - Repaired the broken test suite.
