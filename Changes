@@ -12,3 +12,14 @@ Revision history for Perl extension Lingua::TokenParse.
     - Handled prefix and suffix hyphens.
     - Enhanced documentation.
     - Made a handy eg/sample script that uses a dict server.
+
+0.04  Tue Apr 8
+    - Removed the misleading ..okay broken code to concatinate
+      unknown fragments in the build_knowns() method.
+    - Added the entirely crucial, and sorely lacking, reset_parse()
+      method.
+    - Added an attribute and build method for the fragment
+      definitions in the knowns hash.
+    - Enhanced the eg/ directory.
+    - Updated the documentation.
+    - Updated the test suite.

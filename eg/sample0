@@ -1,0 +1,43 @@
+#!/usr/bin/perl -w
+use strict;
+#
+# This is the module's SYNOPSIS section.
+#
+  use Lingua::TokenParse;
+
+  my $word = 'partition';
+  my %lexicon;
+  @lexicon{qw(ti art ion)} = ();
+
+  my $obj = Lingua::TokenParse->new(
+      word => $word,
+      lexicon => \%lexicon,
+  );
+
+  $obj->output_knowns;
+
+  # Okay.  Now, let's parse a new word.
+  $obj->reset_parse;
+
+  $obj->word('metaphysical');
+
+  $obj->lexicon({
+      'meta-' => 'more comprehensive',
+      'phys'  => 'natural science, singular',
+      '-ic'   => 'being, containing',
+      '-al'   => 'relating to, characterized by',
+  });
+
+  $obj->build_parts;
+  $obj->build_combinations;
+  $obj->build_knowns;
+  $obj->build_definitions;
+
+  $obj->output_knowns;
+
+  print "@$_\n" for @{ $obj->parts };  # This has nice looking output.
+  use Data::Dumper;
+  print Dumper $obj->parts;
+  print Dumper $obj->combinations;
+  print Dumper $obj->knowns;
+  print Dumper $obj->definitions;

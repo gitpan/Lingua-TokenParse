@@ -1,7 +1,10 @@
 Changes
-Makefile.PL
 MANIFEST
+Makefile.PL
 README
 TokenParse.pm
+eg/dict_fetch
+eg/sample0
 eg/sample1
+eg/sample2
 t/1.t

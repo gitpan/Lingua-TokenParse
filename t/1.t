@@ -1,6 +1,6 @@
 use strict;
 use Data::Dumper;
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 BEGIN { use_ok('Lingua::TokenParse') };
 
@@ -341,8 +341,23 @@ my $knowns = {  # {{{
     'partit.i.on'   => '0.666666666666667',
 };  # }}}
 
+my $definitions = {  # {{{
+    'i'       => 'b',
+    'it'      => undef,
+    'iti'     => undef,
+    'ition'   => undef,
+    'on'      => 'd',
+    'part'    => 'a',
+    'parti'   => undef,
+    'partit'  => undef,
+    'partiti' => undef,
+    't'       => undef,
+    'ti'      => undef,
+    'tion'    => 'c',
+};  # }}}
+
 my %lexicon;
-@lexicon{qw(part i tion on)} = ();
+@lexicon{qw(part i tion on)} = qw(a b c d);
 
 my $obj = Lingua::TokenParse->new(
     word => 'partition',
@@ -352,13 +367,4 @@ my $obj = Lingua::TokenParse->new(
 is_deeply $obj->parts, $parts, 'word partitions';
 is_deeply $obj->combinations, $combinations, 'all combinations';
 is_deeply $obj->knowns, $knowns, 'known combinations';
-
-__END__
-$obj->build_parts;
-print "@$_\n" for @{ $obj->parts };
-print Dumper $obj->parts;
-$obj->successors;
-print Dumper $obj->combinations;
-$obj->trim_combinations;
-print Dumper $obj->knowns;
-$obj->output_knowns;
+is_deeply $obj->definitions, $definitions, 'fragment definitions';
