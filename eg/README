@@ -1,11 +1,5 @@
-* NOTE: Only the sample* and token_parse programs actually make use
-  the Lingua::TokenParse module.  The others are simply provided for
-  convenience.
-
-README - This file.
 dict_fetch - Program to grab entries from a dictionary server.
 sample1 - A simple example program.
 sample2 - An example program that calls dict_fetch.
-set_entry - A handy CGI that I use to assist in populating lexicons.
-token_parse - A sample CGI (provided because, let's face it, most
-    word people are not computer programmers).
+set_entry - A handy CGI to assist in populating lexicons.
+token_parse - Another sample CGI

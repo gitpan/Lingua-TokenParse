@@ -1,17 +1,11 @@
-# $Id: TokenParse.pm,v 1.10 2004/05/17 04:58:30 gene Exp $
+# $Id: TokenParse.pm,v 1.11 2004/05/29 23:08:36 gene Exp $
 
 package Lingua::TokenParse;
-$VERSION = '0.15';
+$VERSION = '0.1501';
 use strict;
 use warnings;
 use Carp;
 use Math::BaseCalc;
-
-# The {{{ and }}} markers are "editor code fold".  They are merely a
-# convenience for people who don't care to scroll through reams of
-# source.
-#
-# Things are sorted in loops for debugging purposes only.
 
 sub new {  # {{{
     my $proto = shift;
@@ -392,59 +386,53 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
 
   use Lingua::TokenParse;
 
-  my $word = 'partition';
-  my %lexicon;
-  @lexicon{qw(art ion ti)} = qw(foo bar baz);
   my $obj = Lingua::TokenParse->new(
-      word    => $word,
-      lexicon => \%lexicon,
+      word => 'antidisthoughtlessfulneodeoxyribonucleicfoo'
   );
-  print scalar $obj->output_knowns;
-
-  # Okay.  Now, let's parse a new word.
   $obj->lexicon({
-      'meta-' => 'more comprehensive',
-      'ta'    => '',
-      'phys'  => 'natural science, singular',
-      '-ic'   => 'being, containing',
-      '-al'   => 'relating to, characterized by',
+      'a'    => 'not',
+      'anti' => 'opposite',
+      'di'   => 'two',
+      'dis'  => 'away',
+      'eo'   => 'hmmmmm',
+      'ful'  => 'with',
+      'les'  => 'without',
+      # etc...
   });
-  $obj->constraints([ qr/^me\./ ]);
-  $obj->parse('metaphysical');
-  my @knowns = $obj->output_knowns;
+  $obj->constraints([ qr/eo./ ]);
+  $obj->parse;
+  print Dumper($obj->knowns);
 
 =head1 DESCRIPTION
 
 This class represents a Lingua::TokenParse object and contains 
-methods to parse a given word into familiar combinations based on a 
-lexicon of known word parts.
+methods to parse a given word into familiar combinations based
+on a lexicon of known word parts.
 
-A word like "partition" is actually composed of a few different word
-parts.  Given a lexicon of known fragments, it is possible to 
-partition this word into possibly overlapping fragment combinations.
+Words like "partition" and "automobile" are composed of different
+word parts.  Given a lexicon of known fragments, one can partition
+a word into a list of its (possibly overlapping) fragment
+combinations.
 
 Each of these combinations can be given a score, which represents a 
-measure of word familiarity.  This measure is a set of simple ratios 
-of known to unknown parts.
+measure of word familiarity.  This measure is a set of ratios of
+known to unknown parts.
 
-The lexicon must have a definition for each entry, in order to have 
-the current C<trim_knowns> method do the right thing.  The definition 
-can be an empty string (i.e. '').  However, if the definition is 
-undefined, the fragment is considered an unknown.
+The lexicon is a simple I<fragment => definition> list and must have
+a definition for each entry.  This definition can be an empty string
+(i.e. ''), but if it is undefined the fragment is considered an
+unknown.
 
-Please see the sample code in the distribution eg/ directory for 
+Please see the sample code in the distribution C<eg/> directory for 
 examples of how this module can be used.
 
 =head1 METHODS
 
-=head2 new(%arguments)
+=head2 new
 
   $obj = Lingua::TokenParse->new(
-      word        => $word,
-      lexicon     => \%lexicon,
-      separator   => $separator,
-      not_defined => $not_defined,
-      unknown     => $unknown,
+      word => $word,
+      lexicon => \%lexicon,
   );
 
 Return a new Lingua::TokenParse object.
@@ -452,51 +440,39 @@ Return a new Lingua::TokenParse object.
 This method will automatically call the partition methods (detailed 
 below) if a word and lexicon are provided.
 
-The word can be any string, however, you will want to make sure that 
-it does not include the same characters you use for the separator,
-not_defined and unknown strings (described below).
+The C<word> can be any string, however, you will want to make sure that 
+it does not include the same characters you use for the C<separator>,
+C<not_defined> and C<unknown> strings (described below).
 
-The lexicon must be a hash reference with word fragments as keys and
-definitions their respecive values.  Definitions must be defined in 
+The C<lexicon> must be a hash reference with word fragments as keys and
+definitions their respective values.  Definitions must be defined in 
 order for the trim_knowns method work properly.
 
-The separator is the string used to separate fragment definitions in
-the output_knowns method.  The default is a plus symbol surrounded 
-by single spaces (' + ').
-
-The not_defined argument is the the string used by the output_knowns 
-method to indicate a known fragment that has no 
-definition.  The default is a period (.).
-
-The unknown argument is the the string used by the output_knowns 
-method to indicate an unknown fragment.  The default is the question
-mark (?).
-
-=head2 parse()
+=head2 parse
 
   $obj->parse;
   $obj->parse($word);
 
 This method resets the partition lists and then calls all the 
-indiviual parsing methods that are detailed below.
+individual parsing methods that are detailed below.
 
 If a string is provided the word to parse is first set to that.
 
-=head2 build_parts()
+=head2 build_parts
 
   $obj->build_parts;
 
 Construct an array of the word partitions, accessed via the parts
 method.
 
-=head2 build_combinations()
+=head2 build_combinations
 
   $obj->build_combinations;
 
 Compute the array of all possible word part combinations, excluding
 constraints and accessed via the combinations method.
 
-=head2 build_knowns()
+=head2 build_knowns
 
   $obj->build_knowns;
 
@@ -508,7 +484,7 @@ which encode information about what is a syntactically illegal word
 combination, which can be used to score (or even throw out bogus
 combinations).
 
-=head2 build_definitions()
+=head2 build_definitions
 
   $obj->build_definitions;
 
@@ -516,136 +492,113 @@ Construct a hash of the definitions of the word parts in each
 combination in the keys of the knowns hash.  This hash is accessed
 via the definitions method.
 
-=head2 trim_knowns()
+=head2 trim_knowns
 
   $obj->trim_knowns;
 
 Trim the hash of known combinations by concatinating adjacent unknown
 fragments and throwing out combinations with a score of zero.
 
-=head2 output_knowns()
+=head1 CONVENIENCE METHOD
 
-  print scalar $obj->output_knowns;
-  @knowns = $obj->output_knowns;
+=head2 output_knowns
 
-Convenience method to return the familiar word part combinations with
-their familiarity scores (rounded to two decimals) and fragment 
-definitions.
+  @ = $obj->output_knowns;
+  print Dumper \@knowns;
 
-In scalar context, a single, newline separated string is returned.
-In array context, each of these scored combinations, with their 
-fragment definitions is a separate entry in an array.
+  # Look at the "even friendlier output."
+  print scalar $obj->output_knowns(
+      separator   => $separator,
+      not_defined => $not_defined,
+      unknown     => $unknown,
+  );
+
+This method returns the familiar word part combinations in a couple
+"human accessible" formats.  Each have familiarity scores rounded to
+two decimals and fragment definitions shown in a readable layout
+
+=over 4
+
+=item separator
+
+The the string used between fragment definitions.  Default is a plus
+symbol surrounded by single spaces: ' + '.
+
+=item not_defined
+
+Indicates a known fragment that has no definition.  Default is a
+single period: '.'.
+
+=item unknown
+
+Indicates an unknown fragment.  The default is the question mark: '?'.
+
+=back
 
 =head1 ACCESSORS
 
-These accessors both get and set their respective values.  Note 
-that, if you set the word, lexicon or constraints after construction,
-you must manually initialize the parse lists and run the partition 
-methods (via the parse method).
+=head2 word
 
-Also, note that it is useless to set the parts, combinations and 
-knowns lists, since they are computed by the partition methods.
+  $word = $obj->word;
+  $obj->word($word);
 
-=head2 word()
+The actual word to partition which can be any string.
 
-  $word = $obj->word($word);
+=head2 lexicon
 
-The actual word to partition.
-
-Ths word can be any string, however, you will want to make sure that 
-it does not include the same characters you use for the separator,
-not_defined and unknown strings.
-
-=head2 lexicon()
-
-  $lexicon = $obj->lexicon(\%lexicon);
+  $lexicon = $obj->lexicon;
+  $obj->lexicon(\%lexicon);
 
 The lexicon is a hash reference with word fragments as keys and
 definitions their respective values.
 
-Note that the definitions must all be defined in order for the
-C<trim_knowns> method to work properly.
-
-=head2 parts()
+=head2 parts
 
   $parts = $obj->parts;
 
-The array reference of word partitions.
+The array reference of all possible word partitions.
 
-This method is only useful for fetching, since the parts are computed 
-by the C<build_parts> method.
-
-=head2 combinations()
+=head2 combinations
 
   $combinations = $obj->combinations;
 
 The array reference of all possible word part combinations.
 
-This method is only useful for fetching, since the combinations are 
-computed by the C<build_combinations> method.
-
-=head2 knowns()
+=head2 knowns
 
   $knowns = $obj->knowns;
 
-The hash reference of known combinations (keys) with their 
-familiarity scores (values).  Note that only the non-zero scored 
-combinations are kept.
+The hash reference of known (non-zero scored) combinations with their
+familiarity values.
 
-This method is only useful for fetching, since the knowns are 
-computed by the C<build_knowns> method.
-
-=head2 definitions()
+=head2 definitions
 
   $definitions = $obj->definitions;
 
 The hash reference of the definitions provided for each fragment of 
 the combinations with the values of unknown fragments set to undef.
 
-=head2 constraints()
+=head2 constraints
 
-  $constraints = $obj->constraints(\@regexps);
+  $constraints = $obj->constraints;
+  $obj->constraints(\@regexps);
 
 An optional, user defined array reference of regular expressions to
-apply to the list of known combinations.  If a match is successful, 
-the entry is excluded from the list.
-
-=head2 separator()
-
-  $separator = $obj->separator($separator);
-
-The separator is the string used to separate fragment definitions in
-the C<output_knowns> method.  The default is a plus symbol surrounded 
-by single spaces (' + ').
-
-=head2 not_defined()
-
-  $not_defined = $obj->not_defined($not_defined);
-
-The not_defined argument is the the string used by the 
-C<output_knowns> method to indicate a known fragment that has no 
-definition.  The default is a period (.).
-
-=head2 unknown()
-
-  $unknown = $obj->unknown($unknown);
-
-The unknown argument is the the string used by the output_knowns 
-method to indicate an unknown fragment.  The default is the question
-mark (?).
+apply to the list of known combinations.  This is acts as a negative
+pruning device.  Taht is, if a match is successful, the entry is
+excluded from the list.
 
 =head1 TO DO
 
 Compute the time required for a given parse.
 
-Use traditional stemming to trim down the common knowns.
-
 Make a method to request definitions for unknown fragments and call
-it C<learn>.
+it... C<learn()>.
 
-Make the output_knowns() method suck less.
+Use traditional stemming to trim down the common knowns and see if
+the score is the same...
 
-Synthesize a term list based on word part (thesaurus) definitions.
+Synthesize a term list based on a thesaurus of word-part definitions.
 That is, go in reverse.  Non-trivial!
 
 =head1 SEE ALSO
@@ -659,7 +612,8 @@ For my Grandmother and English teacher Frances Jones.
 =head1 THANK YOU
 
 Thank you to Luc St-Louis for helping me increase the speed while
-eliminating the exponential memory footprint.  lucs++
+eliminating the exponential memory footprint.  I wish I knew your
+email address so I could tell you.  :-) B<lucs++>
 
 =head1 AUTHOR
 

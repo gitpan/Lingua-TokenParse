@@ -3,7 +3,6 @@ use strict;
 use DB_File;
 use CGI ':standard';
 use CGI::Carp 'fatalsToBrowser';
-use lib '/home/staff/gene/lib';
 use Lingua::TokenParse;
 
 my $max = 12;

@@ -137,3 +137,7 @@ Revision history for Perl extension Lingua::TokenParse.
     - Excluded definitions of 'undef'.
     - Trimmed and updated documentation.
     - Trimmed and enhanced test script.
+
+0.1501 Sat May 29 2004
+    - Fixed POD Big Time.
+    - Cleaned extraneous poo from the eg/ directory.
