@@ -1,7 +1,7 @@
-# $Id: TokenParse.pm,v 1.5 2004/05/16 02:41:51 gene Exp $
+# $Id: TokenParse.pm,v 1.6 2004/05/16 02:58:02 gene Exp $
 
 package Lingua::TokenParse;
-$VERSION = '0.14';
+$VERSION = '0.1401';
 use strict;
 use warnings;
 use Carp;
@@ -145,39 +145,6 @@ sub build_parts {  # {{{
         for my $j (1 .. $len - $i) {
             push @{ $self->parts->[$i] }, substr $self->word, $i, $j;
         }
-    }
-}  # }}}
-
-sub old_build_combinations {  # {{{
-    my ($self, $i) = @_;
-
-    # What iteration through the combo list are we?
-    $i = 0 unless defined $i;
-    # Initialise the previous iteration to zero the first time.
-    $self->{_prev} = 0 unless defined $self->{_prev};
-
-    # Loop through the combinations.
-    for (@{ $self->parts->[$i] }) {
-        # Find the end-position of the stem.
-        my $n = $i + length;
-
-        # XXX This is an ugly mystery-hack:
-        # Yank-off the last two stems found, if we are at an
-        # "overlap point".
-        splice @{ $self->{_new} }, -2 if $self->{_prev} > $i;
-
-#print "$_ - i: $i, n: $n, prev: $self->{_prev}, new: ". @{ $self->{_new} } ."\n";
-
-        # Remember where we were.
-        $self->{_prev} = $i;
-
-        # Shove this combo in place of 
-        splice @{ $self->{_new} }, @{ $self->{_new} }, $n, $_;
-
-        push @{ $self->combinations }, join '.', @{ $self->{_new} }
-            if $n == length ($self->word);
-
-        $self->build_combinations($n);
     }
 }  # }}}
 

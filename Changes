@@ -123,3 +123,8 @@ Revision history for Perl extension Lingua::TokenParse.
     - Implemented lucs' "binary arithmetic cheat" solution.
       Yay lucs++ !
     - Updated POD accordingly.
+
+0.1401 Sat May 15 2004
+    - Ack!  I forgot to update the Makefile.PL and require the
+      Math::BaseCalc module.
+    - Removed old_build_combinations().
