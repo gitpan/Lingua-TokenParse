@@ -151,3 +151,7 @@ Revision history for Perl extension Lingua::TokenParse.
     - Cleaned up POD.
     - Added constraint checking to the build_parts() method.
     - Got rid of the unnecessary trim_knowns() method.
+
+0.1601 Sat Aug 7 2004
+    - Cleaned up POD a bit - no functional changes.
+    - Added lexicon_cache tests.

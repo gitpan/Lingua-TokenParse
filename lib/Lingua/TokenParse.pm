@@ -1,7 +1,7 @@
-# $Id: TokenParse.pm,v 1.19 2004/08/04 17:19:58 gene Exp $
+# $Id: TokenParse.pm,v 1.20 2004/08/08 01:20:36 gene Exp $
 
 package Lingua::TokenParse;
-$VERSION = '0.16';
+$VERSION = '0.1601';
 use strict;
 use warnings;
 use Carp;
@@ -460,7 +460,7 @@ is provided the object's C<word> attribute is reset to that, first.
 
   $parts = $p->build_parts;
 
-Construct an array of the word partitions.
+Construct an array reference of the word partitions.
 
 =head2 build_definitions
 
@@ -472,7 +472,7 @@ Construct a table of the definitions of the word parts.
 
   $combos = $p->build_combinations;
 
-Compute the array of all possible word part combinations.
+Compute the array reference of all possible word part combinations.
 
 =head2 build_knowns
 
@@ -555,9 +555,6 @@ The lexicon is a hash reference with word fragments as keys and
 definitions their respective values.  It can be set with either a
 hash or a hash reference.
 
-If an argument is supplied but is neither a hash or hashref, the
-lexicon is cleared (reset to {} an empty hashref).
-
 =head2 parts
 
   $parts = $p->parts;
@@ -590,9 +587,9 @@ the combinations with the values of unknown fragments set to undef.
   $p->constraints(\@regexps);
 
 An optional, user defined array reference of regular expressions to
-apply to the list of known combinations.  This is acts as a negative
-pruning device, meaning that if a match is successful, the entry is
-excluded from the list.
+apply when constructing the list of parts and combinations.  This
+acts as a negative pruning device, meaning that if a match is
+successful, the entry is excluded from the list.
 
 =head1 EXAMPLES
 

@@ -1,5 +1,4 @@
 Changes
-eg/lexicon.db
 eg/word_parse
 lib/Lingua/TokenParse.pm
 Makefile.PL
