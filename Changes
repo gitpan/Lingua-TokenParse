@@ -77,3 +77,7 @@ Revision history for Perl extension Lingua::TokenParse.
     - Removed the unused @parsed array and made the other (two)
       globals used by the build_combinations() method into object
       attributes.
+
+0.10
+    - Added user defined, trimming regular expression support.
+    - Fixed and enhanced documentation.

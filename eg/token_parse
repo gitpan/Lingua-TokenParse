@@ -59,7 +59,7 @@ if ($word and $obj) {
 }
 
 print hr,
-    a({ -href => 'http://search.cpan.org/author/GENE/Lingua-TokenParse-0.09/' },
+    a({ -href => 'http://search.cpan.org/dist/Lingua-TokenParse/' },
         b('The Lingua::TokenParse module')),
     br,
     a({ -href => 'http://ology.net/dev/lex/code/token_parse' },

@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 BEGIN { use_ok('Lingua::TokenParse') };
 
@@ -416,3 +416,9 @@ is_deeply [ $obj->output_knowns ], $array_out,
     'scored and defined combinations in array context';
 is scalar $obj->output_knowns, $scalar_out,
     'scored and defined combinations in scalar context';
+
+$obj->rules([ qr/\.on$/ ]);
+$obj->parse;
+is_deeply $obj->knowns, {
+    'part.i.tion' => [1, 1],
+}, 'trimming regexp';

@@ -2,11 +2,13 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.09';
+$VERSION = '0.10';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
 # reams of source, like me.
+
+# NOTE: I sort things in loops for debugging purposes only.
 
 sub new {  # {{{
     my ($class, %args) = @_;
@@ -28,6 +30,8 @@ sub new {  # {{{
         definitions  => {},
         # Fragment definition separator.
         separator    => ' + ',
+        # Known trimming regexp rules.
+        rules        => [],
         # Globals used by the build_combinations method (and
         # initialized by the _reset_parse() method).
         _new  => [],
@@ -85,6 +89,12 @@ sub separator {  # {{{
     my $self = shift;
     $self->{separator} = shift if @_;
     return $self->{separator};
+}  # }}}
+
+sub rules {  # {{{
+    my $self = shift;
+    $self->{rules} = shift if @_;
+    return $self->{rules};
 }  # }}}
 # }}}
 
@@ -265,6 +275,22 @@ sub trim_knowns {  # {{{
         delete $trimmed{$combo} if $flag >= 0;
     }
 
+    # Execute user provided regular expressions.
+    for my $combo (sort keys %trimmed) {
+        my $flag = 0;
+
+        # Flag matching rules.
+        for my $rule (@{ $self->rules }) {
+            if ($combo =~ /$rule/) {
+                $flag++;
+                last;
+            }
+        }
+
+        # Remove combinations that were flagged as being bogus.
+        delete $trimmed{$combo} if $flag;
+    }
+
     # Set the knowns list to the new trimmed list.
     $self->knowns(\%trimmed);
 }  # }}}
@@ -334,7 +360,7 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
 
   my $word = 'partition';
   my %lexicon;
-  @lexicon{qw(ti art ion)} = qw(foo bar baz);
+  @lexicon{qw(art ion ti)} = qw(foo bar baz);
   my $obj = Lingua::TokenParse->new(
       word    => $word,
       lexicon => \%lexicon,
@@ -350,6 +376,7 @@ Lingua::TokenParse - Parse a word into scored, fragment combinations
       '-ic'   => 'being, containing',
       '-al'   => 'relating to, characterized by',
   });
+  $obj->rules([ qr/^me\./ ]);
   $obj->parse;
   my @knowns = $obj->output_knowns;
 
@@ -464,7 +491,7 @@ Here is the format of the output:
 =head1 ACCESSORS
 
 These accessors both get and set their respective values.  Note 
-that, if you set either the word or lexicon after construction, you 
+that, if you set the word, lexicon or rules after construction, you 
 must manually initialize the parse lists and run the partition 
 methods (via the parse() method).
 
@@ -493,7 +520,7 @@ The array reference of word partitions.
 Note that this method is only useful for fetching, since the parts 
 are computed by the build_parts() method.
 
-=head2 combinations();
+=head2 combinations()
 
   $combinations = $obj->combinations();
 
@@ -521,25 +548,41 @@ The hash reference of the definitions provided for each fragment of
 the combinations in the knowns hash.  Note that the unknown 
 fragments are defined as an empty string.
 
+=head2 separator()
+
+  $separator = $obj->separator($separator);
+
+The character or (characters) separating the fragment definitions that
+are produced by the output_knowns() method.
+
+The default is ' + ' (a plus symbol surrounded by single spaces).
+
+=head2 rules()
+
+  $rules = $obj->rules($rules);
+
+An optional, user defined array of regular expressions to apply to 
+the list of known combinations.  If a match is successful, the entry
+is removed from the list.
+
 =head1 DEPENDENCIES
 
 None
 
 =head1 DISCLAIMER
-
 This module uses some clunky, inefficient algorithms.  For instance,
 a 50 letter word (like a medical term) just might take until the end
-of time to parse and possibly longer.  Please write to me with 
- much needed improvements!
+of time to parse and possibly longer.  Please write to me with much 
+needed improvements!
 
 =head1 TO DO
 
-Add user defined, known combination rule timming callbacks.
+Add user defined, known combination rule trimming callbacks.
 
 Compute the time required for a given parse.
 
 Synthesize a term list based on word part (thesaurus) definitions.
-(That is, go in reverse! Non-trivial!)
+(That is, go in reverse. Non-trivial!)
 
 =head1 DEDICATION
 
