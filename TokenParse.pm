@@ -2,11 +2,11 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.12.1';
+$VERSION = '0.12.2';
 
 # NOTE: The {{{ and }}} things are "editor code fold markers".  They
 # are merely a convenience for people who don't care to scroll through
-# reams of source, like me.
+# reams of source, like me.  vim++ (C<http://www.vim.org>, of course.)
 #
 # Also note that things are sorted in loops for debugging purposes only.
 
@@ -596,16 +596,16 @@ are computed by the build_knowns method.
   $definitions = $obj->definitions();
 
 The hash reference of the definitions provided for each fragment of 
-the combinations in the knowns hash.  Note that the unknown 
-fragments are defined as an empty string.
+the combinations in the knowns hash.  Note that the values of unknown
+fragments are set to undef.
 
 =head2 rules()
 
   $rules = $obj->rules(\@rules);
 
-An optional, user defined array of regular expressions to apply to 
-the list of known combinations.  If a match is successful, the entry
-is removed from the list.
+An optional, user defined array reference of regular expressions to
+apply to the list of known combinations.  If a match is successful, 
+the entry is removed from the list.
 
 To reiterate, this is a negative, pruning device, that is used in the
 trim_knowns method.

@@ -108,3 +108,6 @@ Revision history for Perl extension Lingua::TokenParse.
 
 0.12.1  Mon Jun 16 2003
     - Death to variables named $flag!!
+
+0.12.2  Mon Jun 16 2003
+    - Repaired documentation.
