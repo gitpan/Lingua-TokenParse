@@ -2,7 +2,7 @@ package Lingua::TokenParse;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 sub new {  # {{{
     my ($class, %args) = @_;
@@ -115,6 +115,7 @@ my (@parsed, @new, $prev);
 sub successors {  # {{{
     my ($self, $i) = @_;
     $i = 0 unless defined $i;
+    $prev = 0 unless defined $prev;
 
     for (@{ $self->parts->[$i] }) {
         # Find the end-position of the stem.
@@ -152,7 +153,7 @@ __END__
 
 =head1 NAME
 
-Lingua::TokenParse - Parse a word into familiar parts
+Lingua::TokenParse - Parse a word into scored, familiar combinations
 
 =head1 SYNOPSIS
 
@@ -170,31 +171,56 @@ Lingua::TokenParse - Parse a word into familiar parts
 
 =head1 ABSTRACT
 
-Parse a word into familiar parts.
+This class represents a Lingua::TokenParse object and contains 
+methods to parse a given word into familiar combinations based on a 
+lexicon of known word parts.
 
 =head1 DESCRIPTION
 
-Parse a word into familiar parts.
+A word like "partition" is actually composed of a few different word
+parts.  Given a lexicon of known word parts, it is possible to 
+partition this word into combinations of these (possibly overlapping)
+parts.  Each of these combinations can be given a score, which 
+represents a measure of familiarity.
+
+Currently, this familiarity mesasure is a simple ratio of known to 
+unknown parts.
 
 =head1 METHODS
 
 =head2 new()
 
+  $obj = Lingua::TokenParse->new(
+      word    => $word,
+      lexicon => \%lexicon,
+  );
+
 Return a new Lingua::TokenParse object.
 
+This method will automatically call the partition methods (detailed 
+below) if a word and lexicon are provided.
+
 =head2 build_parts()
+
+  $obj->build_parts();
 
 Construct an array of the word partitions.
 
 =head2 successors()
 
+  $obj->successors();
+
 Recursively compute the array of all possible word part combinations.
 
 =head2 trim_combinations()
 
+  $obj->trim_combinations();
+
 Compute the familiar word part combinations.
 
 =head2 output_knowns()
+
+  $obj->output_knowns();
 
 Convenience method to output the familiar word part combinations.
 
@@ -208,25 +234,45 @@ by the partition methods.
 
 =head2 word()
 
+  $word = $obj->word($word);
+
 The actual word to partition.
 
 =head2 lexicon()
 
-The hash of word parts (keys) with their (optional) definitions 
-(values).
+  $lexicon = $obj->lexicon($lexicon);
+
+The hash reference of word parts (keys) with their (optional) 
+definitions (values).
 
 =head2 parts()
 
-The array of word partitions.
+  $parts = $obj->parts();
+
+The array reference of word partitions.
+
+Note that this method is only useful for fetching, since the parts 
+are computed by the build_parts() method.
 
 =head2 combinations()
 
-The array of all possible word part combinations.
+  $combinations = $obj->combinations();
+
+The array reference of all possible word part combinations.
+
+Note that this method is only useful for fetching, since the 
+combinations are computed by the successors() method.
 
 =head2 knowns()
 
-The hash of known combinations (keys) with their familiarity scores
-(values).  Note that only the non-zero scored combinations are kept.
+  $knowns = $obj->knowns();
+
+The hash reference of known combinations (keys) with their 
+familiarity scores (values).  Note that only the non-zero scored 
+combinations are kept.
+
+Note that this method is only useful for fetching, since the knowns
+are computed by the trim_combinations() method.
 
 =head1 DEPENDENCIES
 
@@ -234,17 +280,16 @@ None
 
 =head1 TO DO
 
+Handle the successor method and globals correctly.
+
 Return word part definitions.
 
 Synthesize a term list based on word part (thesaurus) definitions.
+(That is, go in reverse! Non-trivial!)
 
 =head1 DEDICATION
 
 My Grandmother and English teacher - Frances Jones
-
-=head1 THANK YOU
-
-Sean M. Burke <sburke@cpan.org>
 
 =head1 AUTHOR
 
